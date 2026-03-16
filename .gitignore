@@ -1,0 +1,16 @@
+# ── 下載的 EML/附件檔案 ──
+下載區/
+整理好的檔案/
+V3-下載區-*/
+
+# ── 測試產出的 JSON 日誌 ──
+V3-*.json
+
+# ── macOS ──
+.DS_Store
+**/.DS_Store
+
+# ── Python ──
+__pycache__/
+*.pyc
+.venv/

@@ -1,0 +1,484 @@
+# IP Winner Email Processor V3 — 工程架構文件
+
+> 版本：1.2
+> 最後更新：2026-03-15
+> 程式碼：`email-processor/Code.gs`（~5,100+ 行，單檔部署）
+
+---
+
+## 一、系統架構概覽
+
+```
+┌─────────────────────────────────────────────────────┐
+│                  Google Apps Script                   │
+│                    (Code.gs)                          │
+│                                                       │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
+│  │  Setup &  │  │  Menu &  │  │ Scheduler│           │
+│  │  Init     │  │  UI      │  │ & Trigger│           │
+│  └──────────┘  └──────────┘  └──────────┘           │
+│                                                       │
+│  ┌───────────────────────────────────────────────┐   │
+│  │            Core Processing Pipeline            │   │
+│  │                                                │   │
+│  │  Gmail Search → Preprocessing → LLM Classify  │   │
+│  │  → Source ID → Naming → Drive Archive → Label │   │
+│  └───────────────────────────────────────────────┘   │
+│                                                       │
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐           │
+│  │ Feedback │  │  Prompt  │  │  Stats   │           │
+│  │ Learning │  │  Mgmt    │  │ & Log    │           │
+│  └──────────┘  └──────────┘  └──────────┘           │
+└──────────┬──────────┬──────────┬──────────┬──────────┘
+           │          │          │          │
+      ┌────▼───┐ ┌───▼───┐ ┌───▼──┐ ┌────▼─────┐
+      │ Gmail  │ │ Drive │ │Sheet │ │ Gemini   │
+      │ API    │ │ API   │ │ API  │ │ 3.0 Flash│
+      └────────┘ └───────┘ └──────┘ └──────────┘
+```
+
+### 部署模式
+- **Standalone Script**：不綁定特定 Spreadsheet
+- `SpreadsheetApp.create()` + Drive 搜尋，可多租戶共用
+- 透過 `setupAll()` 一鍵初始化所有資源
+
+### 外部依賴
+| 服務 | 用途 | API |
+|------|------|-----|
+| Gmail | 讀取郵件、管理標籤 | GmailApp |
+| Google Drive | EML/附件存檔 | DriveApp |
+| Google Sheets | 設定、紀錄、Sender 名單 | SpreadsheetApp |
+| Google Docs | LLM Prompt 匯出 | DocumentApp |
+| Gemini 3.0 Flash | 語義分類 + 命名 | UrlFetchApp (REST) |
+
+---
+
+## 二、資料流
+
+### 主處理流程
+
+```
+Gmail Inbox
+    │
+    ▼
+[1] Gmail Search（query: newer_than:7d 等）
+    │  排除已處理 messageId（Sheet 比對）
+    ▼
+[2] Preprocessing（規則引擎）
+    ├── 抽取案號（CASE_NUMBER_REGEX + word boundary）
+    ├── 判斷 F/T（sender ∈ OWN_DOMAINS?）
+    ├── 查 Sender 名單 → role = C/A/G/X
+    ├── 去除 RE:/Fwd: 前綴
+    ├── 抽取附件名稱列表
+    ├── 提取 HTML highlights（粗體/上色文字）
+    ├── _extractMainBody()：從 HTML 切割主文，排除引用/簽名檔
+    ├── _extractDatesFromText()：regex 提取所有日期（6 種格式）
+    └── _getThreadSubjects()：取同 thread 其他信件標題
+    │
+    ▼
+[3] LLM Batch Classify（UrlFetchApp.fetchAll）
+    ├── 每批最多 20 封同時送出
+    ├── Input: structured email info + extracted_dates + thread_context + 高頻模板 + 近期修正
+    ├── Output: JSON（收發碼、語義名、dates_found、類別、信心、inferred_role、correction_applied）
+    ├── _parseGeminiResponse() 統一解析 + _repairJson() 修復截斷
+    └── 單封重試機制（最多 5 次，不重送整批）
+    │
+    ▼
+[3.5] Thread 事項碼對齊（_alignThreadEventCodes）
+    ├── 按 Thread ID 分組批次結果
+    ├── 提取 (OA1)/(ROA2) 等事項碼
+    ├── 同類型取最高序號統一替換
+    └── 確保同 thread 信件事項碼一致
+    │
+    ▼
+[3.6] 結構化期限附加（_selectDeadline）
+    ├── 根據 dates_found + 收發碼，確定性規則選期限
+    ├── TA → our_request 優先，FA → counterpart_eta 優先
+    ├── 過期檢查 → fallback 官方期限
+    └── 附加到 emlFilename 末尾（如 -期限3/17）
+    │
+    ▼
+[4] Source Identification（僅 role=X）
+    ├── confidence ≥ 0.6 + inferred_role → 改具體碼 + AI/自動辨識來源
+    ├── confidence < 0.6 → 保留 FX/TX + AI/未知來源
+    └── 完全無法判斷 → AI/已跳過
+    │
+    ▼
+[5] Naming（組合檔名）
+    └── {yyyyMMdd}-{收發碼}-{案號標記}-{語義名}.eml
+    │
+    ▼
+[6] Drive Archive（逐封處理，單線程）
+    ├── _createFolderCache()：批次共用資料夾快取
+    ├── 定位/建立案號資料夾（快取命中 → 0ms）
+    ├── 重複偵測（同名 + 同大小 ±100 bytes → skip）
+    ├── getRawContent() → createFile()
+    ├── 附件下載（F 方向 + FX）
+    └── 多案號 → 複製到每個案號資料夾 + 各自記錄資料夾連結
+    │
+    ▼
+[7] Label & Record
+    ├── Gmail: 加收發碼 + 類別 + 狀態標籤
+    └── Sheet: 寫入處理紀錄（20 欄）
+```
+
+### 回饋流程
+
+```
+人工操作                         系統偵測（runFeedback）
+───────                         ──────────────────
+
+[Part 1] Gmail 標籤修正
+移除 AI/自動辨識來源        →   偵測標籤移除
+修改 AI/FX → AI/FA         →   比對原始收發碼 vs 當前標籤
+                            →   更新 Sender 名單（_addSender 含去重）
+                            →   更新 Sheet（來源確認狀態、修正來源）
+
+[Part 2] Sheet 修正名稱
+填入「修正後名稱」欄        →   偵測欄位有值
+                            →   組出新 baseName
+                            →   Drive EML/附件改名（跨多案號資料夾）
+                            →   更新修正來源（+ name_change）
+
+[Part 3] Sheet 直填收發碼
+填入「最終收發碼」欄        →   偵測欄位有值
+                            →   用收件人/寄件人查對應 email
+                            →   寫入 Sender 名單
+                            →   更新修正來源（+ sheet_edit）
+```
+
+---
+
+## 三、核心資料結構
+
+### CONFIG 常數
+
+```javascript
+CONFIG = {
+  PROJECT_FOLDER_NAME: 'Email自動整理v2',
+  SPREADSHEET_NAME: 'Email自動整理v2-設定檔',
+  GEMINI_MODEL: 'gemini-3-flash-preview',
+  GEMINI_MAX_TOKENS: 4096,
+  BATCH_SIZE: 20,
+  CONFIDENCE_AUTO: 0.8,      // 自動處理閾值
+  CONFIDENCE_INFER: 0.6,     // 來源推斷閾值
+  CONFIDENCE_LOW: 0.5,       // 低信心閾值
+  BODY_SNIPPET_LENGTH: 10000,
+  TIMEOUT_SAFETY_MS: 25 * 60 * 1000,  // 25 分鐘安全閾值
+  MAX_RETRY: 5,
+  CASE_NUMBER_REGEX: /(?<![A-Za-z0-9])[A-Z0-9]{4}\d{5}[PMDTABCW][A-Z]{2}\d*(?![A-Za-z0-9])/g,
+  OWN_DOMAINS: ['ipwinner.com', 'ipwinner.com.tw'],
+  SEND_RECEIVE_CODES: ['FC', 'TC', 'FA', 'TA', 'FG', 'TG', 'FX', 'TX'],
+  CASE_CATEGORIES: ['專利', '商標', '未分類'],
+  GEMINI_INPUT_PRICE_PER_TOKEN: 0.10 / 1000000,   // Gemini Flash input 單價
+  GEMINI_OUTPUT_PRICE_PER_TOKEN: 0.40 / 1000000,  // Gemini Flash output 單價
+}
+```
+
+### Google Sheets 結構
+
+**Sheet 1: Sender 名單**
+| 欄位 | 說明 |
+|------|------|
+| Email 或 Domain | `@bskb.com` 或 `tanaka@gmail.com` |
+| 角色（C/A/G） | 客戶/代理人/政府 |
+| 名稱備註 | 如 BSKB - 美國代理人 |
+
+查詢優先序：email 精確匹配 → domain 匹配。公共 domain（gmail.com 等）強制用完整 email。
+
+**Sheet 2: 處理紀錄（22 欄）**
+```
+ 0: messageId        10: AI案件類別
+ 1: 日期              11: 來源確認狀態（na/pending/confirmed/corrected）
+ 2: 原始標題          12: 資料夾連結
+ 3: sender           13: 最終收發碼
+ 4: AI收發碼          14: 修正後名稱
+ 5: AI推斷角色        15: 修正原因
+ 6: 歸檔案號          16: 修正時間
+ 7: 內文案號          17: 修正來源（tag_change/name_change/sheet_edit/consolidated）
+ 8: AI語義名          18: 重試次數
+ 9: AI信心            19: Input Tokens
+                      20: Output Tokens
+                      21: dates_found (JSON)
+```
+
+**Sheet 3: 分類規則**（10 分類 33 條，setupAll 自動寫入 + consolidateLearning 動態新增）
+
+**Sheet 4: 設定**（信心閾值、batch 大小、checkpoint 等）
+- 含 `MANUAL_MINUTES_PER_EMAIL`（預設 5.5），用於效益統計計算人工基準時間
+
+**Sheet 8: 效益統計**（`_updateBenefitsStats` 自動建立與更新）
+```
+ 0: 日期               5: Output Tokens
+ 1: 處理封數            6: API 成本(USD)
+ 2: 省下時間(分鐘)      7: 累計處理封數
+ 3: 省下時間(小時)      8: 累計省下時間(小時)
+ 4: Input Tokens       9: 累計 API 成本(USD)
+```
+- 每次 `processEmails()` 批次完成後自動累加當天行
+- 每週 `weeklyConsolidate()` 執行 `_reconcileBenefitsStats()` 與 LOG Sheet 對帳修正
+- `showStats()` 讀取此 Sheet 顯示本週/本月/累計效益
+
+### Drive 資料夾結構
+
+```
+Email自動整理v2/
+├── 專利/
+│   ├── BRIT21002PUS5/
+│   │   ├── 20260314-FA-BRIT21002PUS5-送件報告-(ROA1).eml
+│   │   └── 20260314-FA-BRIT21002PUS5-送件報告-(ROA1)-附件1.pdf
+│   └── BRIT24001DUS1/
+├── 商標/
+│   ├── KOIT20004TCN7/
+│   └── BRIT25001TJP1/
+├── 未分類/
+│   ├── BRIT/          ← 有客戶碼但無完整案號
+│   └── 無案號/        ← 完全無案號
+└── LLM Prompt 文件    ← Google Doc
+```
+
+### Gmail 標籤樹
+
+```
+AI/
+├── FC, TC, FA, TA, FG, TG, FX, TX    ← 收發碼（互斥）
+├── 專利, 商標, 未分類                   ← 案件類別（互斥）
+├── 多案號, 無案號                       ← 案號狀態（0-1）
+├── 待確認                               ← 信心 < 0.8
+├── 自動辨識來源                         ← LLM 推斷成功，待人確認
+├── 未知來源                             ← LLM 無法推斷
+├── 已跳過                               ← 完全無法處理
+├── 附件下載錯誤                         ← 附件失敗，自動重試
+└── 處理失敗                             ← 系統錯誤，自動重試
+```
+
+---
+
+## 四、狀態機
+
+### 信件處理狀態
+
+```
+                    ┌─────────┐
+                    │ 未處理   │
+                    └────┬────┘
+                         │ processEmails / trialRun
+                         ▼
+              ┌─────────────────────┐
+              │ 規則引擎前處理       │
+              │ (案號/方向/角色)      │
+              └──────────┬──────────┘
+                         │
+              ┌──────────▼──────────┐
+              │ LLM 分類             │
+              └──────────┬──────────┘
+                         │
+          ┌──────────────┼──────────────┐
+          ▼              ▼              ▼
+    conf ≥ 0.8     0.5 ≤ conf < 0.8   conf < 0.5
+    ┌────────┐     ┌────────────┐    ┌──────────┐
+    │ 自動處理│     │ AI/待確認  │    │ AI/待確認│
+    │        │     │ (LLM命名)  │    │ (原標題) │
+    └───┬────┘     └─────┬──────┘    └────┬─────┘
+        │                │                │
+        ▼                ▼                ▼
+    ┌────────────────────────────────────────┐
+    │        Drive 歸檔 + Gmail 標籤         │
+    └────────────────────┬───────────────────┘
+                         │
+                         ▼
+                    ┌─────────┐
+                    │ 已處理   │ (Sheet 紀錄)
+                    └────┬────┘
+                         │ runFeedback
+                         ▼
+              ┌─────────────────────┐
+              │ 回饋修正（可選）     │
+              │ 標籤/名稱/收發碼    │
+              └─────────────────────┘
+```
+
+### Sender 來源確認狀態機
+
+```
+                ┌──────┐
+                │  na  │ ← role 已知（在 Sender 名單中）
+                └──────┘
+
+sender 不在名單 + LLM 推斷成功
+                ┌─────────┐
+                │ pending │ ← AI/自動辨識來源
+                └────┬────┘
+                     │
+          ┌──────────┼──────────┐
+          ▼                     ▼
+    ┌───────────┐        ┌───────────┐
+    │ confirmed │        │ corrected │
+    │ (人確認)   │        │ (人修正)   │
+    └───────────┘        └───────────┘
+    移除標籤 →            改收發碼標籤 →
+    Sender 加入名單       Sender 以修正角色加入名單
+```
+
+---
+
+## 五、效能特性
+
+### LLM 呼叫（最大優化點）
+- `UrlFetchApp.fetchAll()` 批次並行：20 封 ~6 秒
+- 逐封呼叫同量約 60 秒（10x 差異）
+
+### Drive 操作（瓶頸）
+- Apps Script 單線程，無法並行
+- 資料夾定位：1-3 秒/首次
+- getRawContent()：0.2 秒（一般）～ 1.7 秒（25MB）
+- createFile()：1.2 秒（一般）～ 3.4 秒（25MB）
+- 10 封信 Drive 總計：30-40 秒
+
+### Timeout 防護
+- Google Workspace：30 分鐘執行限制
+- 安全閾值：25 分鐘
+- 每批 20 封寫入 Sheet，更新 checkpoint
+- 接近閾值時自動排下一個 trigger
+
+---
+
+## 六、錯誤處理
+
+### 重試機制
+| 錯誤類型 | 處理方式 | 上限 |
+|---------|---------|------|
+| LLM 回應解析失敗/不完整 | 單封重試（不重送整批）；confidence 遺失也觸發重試；重試耗盡但有檔名→用部分結果 | 5 次 |
+| 附件下載失敗 | 標記 AI/附件下載錯誤 + 重試 | 5 次 |
+| JSON 截斷 | _repairJson() 5 種修復策略 | 1 次 |
+| 系統錯誤 | 標記 AI/處理失敗 + 重試 | 5 次 |
+| 批次處理完仍有新信 | _continueProcessing() 1 分鐘後繼續 | 鏈式 |
+| Sheet 有 [失敗] 紀錄 | _retryFailedEmails() 3 分鐘後重試 | 1 次 |
+
+### 重跑保護
+- 同檔名 + 同大小（±100 bytes）→ 跳過不重建
+- MessageId 去重：Sheet 已有的 messageId 不重複處理
+
+### 已知 Bug 模式（避雷）
+| Bug | 根因 | 已修復 |
+|-----|------|--------|
+| 假案號從 base64 匹配 | regex 無邊界 | ✅ lookbehind/lookahead |
+| T 方向全變 TX | 查寄件人而非收件人 | ✅ 改查外部收件人 |
+| 類型碼誤判 | regex search 先匹到客戶碼 | ✅ 用固定位置 index 9 |
+| 多案號建 19 個資料夾 | 內文案號全觸發 | ✅ 只看主旨 + LLM |
+| 重跑產生重複檔案 | 無偵測 | ✅ 同名同大小 skip |
+| 公共 email 加為客戶 | @gmail.com 代表整個 gmail | ✅ PUBLIC_DOMAINS |
+| T 方向回饋學到自己 | 用寄件人學習 | ✅ 用收件人 |
+| Drive 改名日期偏移 | Sheet Date 時區轉換 | ✅ getSpreadsheetTimeZone() |
+| Sender 名單重複 | 無去重 | ✅ 寫入前掃描 |
+| 回授互相覆蓋 | Part 2 覆蓋 Part 1 | ✅ indexOf + 串接 |
+| TC 用過期期限 | LLM 不知信件日期 | ✅ 傳入 email_date |
+| 同 Thread 事項碼不一致 | 並行 LLM 各自推斷序號 | ✅ _alignThreadEventCodes 後處理對齊 |
+| confidence 遺失誤標失敗 | `parseFloat(undefined)\|\|0` 無法區分遺失 vs 明確 0；Sheet 要求 confidence>0 | ✅ 遺失→-1 哨兵值 + 重試 + fallback + Sheet 只看 emlFilename |
+| 回授 TA 被誤標 FA | thread 有 FA+TA 標籤，迭代先命中 FA | ✅ 只比對同方向(F*/T*)標籤 |
+| 回授後 EML 未改名 | Part 1 只更新 Sheet 未改 Drive | ✅ `_renameDriveFilesForCodeChange()` |
+| 簽名圖片存入 Drive | Outlook 簽名圖被當一般附件 | ✅ `_filterSignatureImages()` 二次過濾 <5KB 圖片 |
+| 單案號 FA 誤判多案號 | `_getThreadSubjects` 含未來信件，LLM 被 thread_context 污染 | ✅ 只傳時間較早的信件 + prompt 強化 |
+
+---
+
+## 七、LLM Prompt 架構
+
+### System Prompt 結構
+```
+[角色定義] → IP Winner 智財事務所 email 分類助手
+[輸入格式] → subject/direction/role/sender/recipients/case_numbers/
+              body_snippet/attachment_names/email_date/
+              extracted_dates/thread_context
+[第一步] → 確認收發碼 + 未知來源角色推斷
+[第二步] → 產生語義檔名（前綴引導 + 自由摘要，不含截止日）
+          + OA vs ROA 判斷規則 + OA 縮寫去重規則
+          + dates_found 分類（4 種 type）
+[第三步] → 案件類別判斷（由程式碼處理）
+[第四步] → 歸檔案號判斷
+[高頻模板] → %%TEMPLATES%%（動態注入 80 個）
+[近期修正] → %%CORRECTIONS%%（動態注入最近 20 筆，排除 consolidated）
+[輸出格式] → JSON schema（含 dates_found、correction_applied）
+```
+
+### Few-shot 學習循環
+```
+人工修正 → Sheet 處理紀錄 → 最近 20 筆注入 prompt
+    ↑                                          │
+    └──── LLM 命名改善 ◄──────────────────────┘
+```
+
+### 每週整理
+- Trigger: 每週一 9:00（weeklyConsolidate）
+- 流程：收集 correction log → LLM 歸納模式 → 寫入 Prompt Doc
+- 自動寫入分類規則 Sheet（下次處理即生效）
+- 標記已整理的修正紀錄為 consolidated（不再重複注入 few-shot）
+
+---
+
+## 八、測試策略
+
+### 現有測試機制
+| 模式 | 函式 | 用途 |
+|------|------|------|
+| 快速驗證 | `trialRunSmall()` | 10 封，檢查基本功能 |
+| 完整測試 | `trialRun()` | 50 封，Phase 1 驗收 |
+| 單封分析 | `testSingleEmail()` | 詳細 log，不寫入 Sheet |
+
+### Phase 1 驗收 Checklist
+- [ ] 語義名正確（特別是期限日期）
+- [ ] 收發碼判定正確
+- [ ] 歸檔案號 vs 內文案號正確區分
+- [ ] Drive 資料夾結構和檔名正確
+- [ ] 修正名稱 → Drive 改名（時區 bug 已修）
+- [ ] Sender 去重（同 sender 多封信）
+- [ ] 匯出 LLM Prompt 文件成功
+- [ ] 整理學習紀錄功能正常
+
+### Log 設計
+- 每封信獨立 log（失敗不影響其他封）
+- Drive 操作分段計時
+- Gemini API 並行時間 vs Drive 逐封時間分開顯示
+- Token 用量 per-email 追蹤（Sheet col 18-19）
+
+---
+
+## 九、安全性考量
+
+| 項目 | 處理方式 |
+|------|---------|
+| API Key | Script Properties 存儲，不在程式碼中 |
+| OAuth Scopes | 最小權限原則（gmail.modify + drive + sheets + external_request） |
+| 資料隔離 | 所有資料在客戶自己的 Google Workspace 內 |
+| PII | 郵件內容不持久化（只存 snippet 在 Sheet，EML 在 Drive） |
+
+---
+
+## 十、SaaS 產品化路線
+
+### 需拆分的模組
+```
+apps-script/
+├── config.gs          ← CONFIG + 可自訂設定
+├── preprocessing.gs   ← 案號提取、方向判斷、角色查詢
+├── llm.gs             ← Gemini API 呼叫、prompt 管理
+├── drive.gs           ← Drive 歸檔、改名、重複偵測
+├── sheet.gs           ← Sheet 讀寫、回饋偵測
+├── feedback.gs        ← 三通道回饋邏輯
+├── labels.gs          ← Gmail 標籤管理
+├── ui.gs              ← 選單、對話框
+└── main.gs            ← setupAll、processEmails 入口
+```
+
+### 需可設定化的項目
+- 案號 regex 格式
+- 類型碼位置和分類映射
+- 語義名前綴列表（per 收發碼）
+- 代理人帳單代碼對照
+- OWN_DOMAINS / PUBLIC_DOMAINS / GOV_DOMAINS
+- 信心閾值
+- Drive 資料夾命名規則
+
+---
+
+*文件維護：每次 QA 完成後更新架構變更與測試結果*
