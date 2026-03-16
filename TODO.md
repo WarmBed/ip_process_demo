@@ -2,276 +2,272 @@
 
 ## Active
 
-### 測試基礎設施重構 — 格式保留還原 + Factory Reset（3/15 實作完成，待部署測試）
+### 👤 待驗證（需手動操作）
 
-**部署**
-- [ ] 複製 Code.gs 到 Apps Script
-- [ ] 重新部署 Web App（新增 `factoryReset` route）
+**修正案號功能（deploy @21）**
+- [ ] Step 1：執行 `setupAll()`，確認 LOG sheet col 24 = 修正案號
+- [ ] Step 2+3：找一封無案號信件 → col 24 填正確案號 → `?action=runFeedback` → 確認搬遷 + cascade
+- [ ] Step 4：待有新信件時驗證 thread 繼承
 
-**測試 1（Snapshot → Restore 格式保留）**
-- [ ] `?action=snapshot` 保存當前狀態
-- [ ] 手動在處理紀錄加幾筆假資料、在 Sender 名單加一筆測試 sender
-- [ ] `?action=restore` 還原
-- [ ] `?action=getSheetData&tab=處理紀錄` 確認假資料已消失、原資料回來
-- [ ] `?action=getSheetData&tab=Sender名單` 確認測試 sender 已消失、原資料回來
-- [ ] 開 Sheet 視覺確認：標題列藍底白字、凍結列、欄寬、隱藏欄全部保留
-- [ ] 開分類規則 tab 確認：10 組類別標題行有合併儲存格 + 背景色、規則行有淺色背景 + ID 粗體
+**Fix 4: Drive EML 改名日期 Mismatch（deploy @20）**
+- [ ] snapshot → swapLabels FA→FC → runFeedback → `renamed ≥ 1` → Drive 確認 → restore
 
-**測試 2（Factory Reset）**
-- [ ] `?action=factoryReset`
-- [ ] 確認 Sender 名單 = 8 筆預設（TIPO, USPTO, EPO...）
-- [ ] 確認分類規則 = 完整 30 條規則 + 10 組類別顏色
-- [ ] 確認處理紀錄 = 空（只有標題列）
-- [ ] 確認設定 = 預設值（信心閾值 0.8 等）
-- [ ] 確認 Drive 專利/商標/未分類資料夾存在但內容清空
+**Fix 1: Snapshot restore rename 完整驗證**
+- [ ] 待下次 swapLabels 測試時一併驗證
 
-**測試 3（Async trigger）**
-- [ ] `?action=consolidateLearning` → 回應 `{status: 'scheduled'}`（非 timeout）
-- [ ] 等 30 秒後 `?action=status` → 確認 status = completed 或 running
+**迴歸偵測** — 需手動改 golden set + 確認 email
+- [ ] 改壞 golden set → runEvaluation → 確認 summary 標紅 + 收到通知 email → 改回
 
 ---
 
-### v3.2.1 修正與簡化（3/15 實作完成，待部署測試）
+### 待觀察 / 低優先
 
-**部署**
-- [ ] 複製 Code.gs 到 Apps Script
-- [ ] 跑 `setupAll()` — 確認無報錯
-- [ ] 選單 → 工具 → 更新 Sender 名單下拉選項 → 確認 header 變 `角色（C/A/G/S）`
-
-**測試 1（標籤簡化）**
-- [ ] `trialRun()` 跑 10-20 封
-- [ ] 有案號信：確認標籤 = 收發碼 + 案件類型（專利/商標）+ [多案號]，**無「未分類」**
-- [ ] 無案號信：確認標籤 = 收發碼 + 無案號，**無「未分類」**
-- [ ] 垃圾信（已知S）：確認標籤只有「垃圾」，**無「未分類」「無案號」**
-- [ ] 垃圾信（自動辨識）：確認標籤 = 垃圾 + 自動辨識來源，**無「未分類」「無案號」**
-
-**測試 2（草稿過濾）**
-- [ ] 在 Gmail Drafts 中有草稿的情況下跑 `trialRun()`
-- [ ] 確認處理紀錄 Sheet 中無草稿信件出現
-
-**測試 3（Spam sender 學習 — 完整 email）**
-- [ ] 在 Gmail 把一封 `workspace-noreply@google.com` 的信移除「自動辨識來源」保留「垃圾」
-- [ ] 跑 `runFeedback()`
-- [ ] 確認 Sender 名單存的是 `workspace-noreply@google.com`，**不是** `@google.com`
-- [ ] 對其他 google.com 信件跑處理，確認不受影響
-
-**測試 4（多案號 bug 修正）**
-- [ ] 找一封主旨單案號的 FA 信（同 thread 有多案號 TA）
-- [ ] 跑 `trialRun()` 處理該信
-- [ ] 確認只存到 1 個案號資料夾
-- [ ] log 應有 `⚠️ 主旨單案號，過濾 thread_context 案號:` 訊息
-
-**測試 5（備註截斷 80 字元）**
-- [ ] 跑 `runFeedback()` 確認 sender 角色後，查 Sender 名單備註欄
-- [ ] 確認長公司名（>40 字元）不被截斷（新上限 80）
-
-**測試 6（小圖片過濾 <3KB）**
-- [ ] 跑 `trialRun()` 處理含小圖附件的信（如 cohorizon.com）
-- [ ] log 應有 `🗑️ 過濾超小圖片:` 訊息
-- [ ] 確認 Drive 無 <3KB 的小圖片檔
-
-**測試 7（客戶名不在語義名）**
-- [ ] 跑 `trialRun()` 處理客戶信件
-- [ ] 確認 eml_filename 不含客戶公司名（如「國昊」「慧盈」）
-- [ ] 確認代理人名（如 BSKB、Tilleke）仍保留在語義名中
-
----
-
-### v3.2 垃圾信標籤 + 自動辨識 + Sender 學習（3/15 實作完成，待部署測試）
-
-**部署**
-- [ ] 複製 Code.gs 到 Apps Script
-- [ ] 跑 `_migrateSenderDropdown()` — 更新既有 Sender 名單 B 欄下拉（C/A/G/S）
-- [ ] 跑 `_setLabelColors()` — 確認 `AI/收發碼/垃圾` 為灰色
-
-**測試 1（新 sender 廣告信）**
-- [ ] `trialRun()` 處理含未知 sender 的廣告信
-- [ ] 確認碼=垃圾、有 `AI/狀態/自動辨識來源` 標籤
-- [ ] 確認 EML 在 `未分類/垃圾/`（無附件）
-- [ ] 確認 Sheet 來源確認狀態=pending
-
-**測試 2（已知 Spam sender）**
-- [ ] 在 Sender 名單填入某 sender 角色=S
-- [ ] `trialRun()` 處理該 sender 的信
-- [ ] 確認碼=垃圾、無 `AI/狀態/自動辨識來源` 標籤
-- [ ] 確認無 EML 下載（Drive 無檔案）
-- [ ] 確認 Sheet 來源確認狀態=na
-
-**測試 3（有案號廣告不當垃圾）**
-- [ ] 找一封有案號的廣告信（LLM 回 `廣告-` 前綴但有歸檔案號）
-- [ ] 確認走正常 FX 流程、EML 存到正常案號資料夾
-
-**測試 4（確認垃圾回授）**
-- [ ] 在 Gmail 移除「自動辨識來源」標籤（保留「垃圾」）
-- [ ] 跑 `runFeedback()`
-- [ ] 確認 Sender 名單出現該 sender 角色=S
-- [ ] 確認 Sheet 來源確認狀態=confirmed
-
-**測試 5（修正垃圾回授）**
-- [ ] 在 Gmail 移除「垃圾」+「自動辨識來源」標籤，掛上正確碼如 FC
-- [ ] 跑 `runFeedback()`
-- [ ] 確認 Sender 名單出現該 sender 角色=C
-- [ ] 確認 EML 從 `未分類/垃圾/` 搬到正確資料夾
-- [ ] 確認附件補下載到同資料夾
-- [ ] 確認 Sheet 資料夾連結已更新
-
-**測試 6（Sender 名單 dropdown）**
-- [ ] 選單 → 工具 → 更新 Sender 名單下拉選項
-- [ ] 確認 B 欄下拉有 C/A/G/S
-
-**測試 7（標籤顏色）**
-- [ ] 選單 → 工具 → 設定標籤顏色
-- [ ] 確認 `AI/收發碼/垃圾` 為灰色
-
----
-
-### v3.1 Bug 修復 + 新功能（3/15 實作完成，待部署測試）
-
-**部署**
-- [ ] 複製 Code.gs 到 Apps Script
-
-**修復 1（收發碼方向）**— 同 thread FA+TA 標籤衝突導致 TA 誤標為 FA
-- [ ] 在處理紀錄 Sheet 找同 thread 有 FA+TA 的 pending rows
-- [ ] 跑 `runFeedback()`
-- [ ] 確認 TA rows 的「來源確認狀態」= `confirmed`（非 `corrected`）
-- [ ] 確認「最終收發碼」欄位沒有被寫入 FA
-
-**修復 2（碼改名）**— 收發碼修正後 Drive EML/附件檔名未更新
-- [ ] 在 Gmail 手動把某封信的收發碼標籤從 FX 改為 FA
-- [ ] 跑 `runFeedback()`
-- [ ] 確認 Drive 對應資料夾的 EML 檔名中收發碼已從 FX 變 FA
-- [ ] log 應有 `📄 碼改名:` 訊息
-
-**修復 3（簽名圖片過濾）**— Outlook 簽名圖被當一般附件存入 Drive
-- [ ] 跑 `processEmails()` 處理含簽名圖的信（如 cohorizon.com 來信）
-- [ ] log 應有 `🗑️ 過濾簽名圖片:` 訊息
-- [ ] 確認 Drive 資料夾不再有 <5KB 的 jpg/png 小圖
-
-**修復 4（thread_context 污染）**— 單案號 FA 被 LLM 誤歸多案號
-- [ ] 找一封主旨只有 1 個案號的信（如 KOIS18001TFR1），同 thread 有多案號回信
-- [ ] 跑 `processEmails()`
-- [ ] 確認只存到 1 個案號資料夾（非 3 個）
-- [ ] 若仍多案號，log 應有 `ℹ️ 主旨單案號但 LLM 判定` 警告
-
-**新功能（公司名稱查詢）**— 回授確認 sender 角色時自動查公司名
-- [ ] 在處理紀錄 Sheet 找 pending + 自動辨識來源的 rows
-- [ ] 跑 `runFeedback()`
-- [ ] 確認 Sender 名單備註欄顯示 `AI推斷確認-{公司名}` 格式
-- [ ] 若網站不通（如 cohorizon.com），備註應仍為 `AI推斷確認`（優雅降級）
-
-### 部署 + 全面驗證（3/15 部署後按順序跑）
-
-**Step 0：部署**
-- [ ] 複製 Code.gs 到 Apps Script
-- [ ] 跑 `setupAll()` — 建立 3 個新 Sheet tab + 設定 Sheet 加「評估通知 Email」
-
-**Step 1：Gmail 標籤系統**
-- [ ] 執行 `resetAllAILabels()` — Gmail 確認三層巢狀結構 AI/收發碼/FC、AI/狀態/待確認 等
-- [ ] 選單「工具 → 設定標籤顏色」— 確認失敗類紅色、待確認類黃色
-- [ ] `trialRun()` 跑幾封 — 確認標籤掛在 `AI/收發碼/FC` 而非 `AI/FC`
-- [ ] 模擬處理失敗（暫時改壞 API key）— 確認 Sheet 寫 `[失敗:1]`，重試後 `[放棄]` + 紅標籤
-
-**Step 2：回饋機制**
-- [ ] 標籤修正回饋：移除/修改收發碼標籤 → `runFeedback()` → Sender 名單更新
-- [ ] 名稱修正回饋：Sheet 填「修正後名稱」→ `runFeedback()` → Drive 檔案改名
-- [ ] 直填收發碼回饋：Sheet 填「最終收發碼」→ `runFeedback()` → Sender 名單更新
-- [ ] 回授偵測在 `AI/收發碼/` 路徑下正常偵測
-- [ ] 處理 68 筆 pending 狀態（確認 sender 角色）
-
-**Step 3：學習整理 Pipeline（Fix 1/2/3）**
-- [ ] Fix 1：Sheet 填 3+ 筆修正 → `runFeedback()` → `consolidateLearning()` → 確認「分類規則」Sheet 底部有新 L{nn} 規則 → `trialRun()` 確認出現在 prompt
-- [ ] Fix 2：確認已整理的紀錄修正來源欄有 `+consolidated` → 再跑 LLM 處理，`%%CORRECTIONS%%` 不含這些紀錄
-- [ ] Fix 3：處理一封和修正紀錄類似的信件 → 查 log 有無 `📎 參考修正紀錄: xxx`
-
-**Step 4：SYSTEM_PROMPT 微調驗證（101 封測試結果）**
-- [ ] `trialRun()` 驗證以下 3 點改善：
-  - [ ] 「告知-確認收到」→ 應變成「告知-確認收到{具體事項}」
-  - [ ] 漏事項碼的信 → 應補上事項碼
-  - [ ] `BSKB送件報告` → 應變成 `送件報告-BSKB`
-- [ ] 測試「匯出 LLM Prompt 文件」確認 Doc 在專案資料夾
-
-**Step 5：回授評估系統**
-- [ ] `seedGoldenSetFromExisting()` — 從既有修正紀錄匯入黃金測試集
-- [ ] `runFeedback()` 後確認「黃金測試集」自動新增一列
-- [ ] 選單「執行評估測試」→ 確認「評估紀錄」有 detail + summary rows
-- [ ] 迴歸偵測：手動改 golden set expected 值 → 重跑評估 → 確認 summary row 標紅 + email
-- [ ] `_updateCorrectionStats()` → 確認「修正統計」Tab 有本週數據
-- [ ] `consolidateLearning()` → 確認用 Gemini Pro + 60s 後自動觸發 `runEvaluation()`
-
-### v3.3 Excel V22 規則同步（3/15 實作完成，待部署測試）
-
-**已更新內容：**
-- [x] SYSTEM_PROMPT 事項碼清單擴充（+P-暫/P-CA/P-CIP/M-*/D-CA/D-CIP/D-似/T-分/申優n/DEC+ASG）
-- [x] 前綴詞彙補充（TC +確認收文-/說明/建議；FC +提出；FA +回覆/是否/提供）
-- [x] 20 個新 EML 命名模板加入 SYSTEM_PROMPT（暫時案/CA案/CIP案/商品服務清單/DEC+ASG/優先權等）
-- [x] Dn 版本號推斷規則加入 SYSTEM_PROMPT
-- [x] 商品服務清單-(n, m類) 命名子模式加入 SYSTEM_PROMPT
-- [x] V3 設計文件同步更新
-
-**部署**
-- [ ] 複製 Code.gs 到 Apps Script
-
-**測試**
-- [ ] `trialRun()` 處理幾封含暫時案/CA案/CIP案相關信件，確認新事項碼正確產出
-- [ ] 確認現有模板不受影響（回歸測試 — 跑幾封一般新案/OA/送件報告信件）
-- [ ] 確認 Dn 版本號推斷：找一封回覆「初稿」的信，確認 LLM 產出 D0
-- [ ] 確認商品服務清單命名：找一封含商品服務清單附件的信，確認類別正確
-
-### 效益統計功能（3/15 實作完成，待部署測試）
-
-**部署**
-- [ ] 複製 Code.gs 到 Apps Script
-- [ ] 跑 `setupAll()` — 確認「設定」Sheet 有 `MANUAL_MINUTES_PER_EMAIL` = 5.5
-
-**測試 1（自動建立 + 首次寫入）**
-- [ ] 執行 `processEmails()`
-- [ ] 確認自動建立「效益統計」Sheet，有標題列（藍底白字）
-- [ ] 確認今天的行有正確數字：處理封數、省下時間、token 用量、API 成本
-
-**測試 2（累加不重複）**
-- [ ] 再跑一次 `processEmails()`
-- [ ] 確認今天仍然只有 1 行，數字是累加的
-
-**測試 3（showStats 效益區塊）**
-- [ ] 執行 `showStats()`
-- [ ] 確認彈窗底部有「📈 自動化效益」區塊，含本週/本月/累計數字
-
-**測試 4（基準分鐘數可調）**
-- [ ] 到「設定」Sheet 把 `MANUAL_MINUTES_PER_EMAIL` 改成 10
-- [ ] 再跑 `processEmails()`
-- [ ] 確認新增的省下時間按 10 分鐘/封計算
-- [ ] 改回 5.5
-
-**測試 5（週回顧補正）**
-- [ ] 手動改「效益統計」Sheet 某天的處理封數為錯誤數字
-- [ ] 執行 `_reconcileBenefitsStats()`
-- [ ] 確認數字被修正為 LOG Sheet 的實際值
-- [ ] 確認累計欄位也跟著更新
-
----
-
-### Phase 1 待確認
-
-- [ ] **排程與回授頻率 review** — 目前早上 7-8 點排程跑一次；回授機制（`consolidateLearning`）是否改為每 6 小時整理過去 48 小時？原本 24 小時設計代表有問題的信件頂多再跑一次。考量已有「失敗 3 分鐘後自動重試」機制，12 小時可能就夠？需確認最佳頻率
+- [ ] **Gmail API Batch 優化** — 當 restore Gmail API calls > 200 時評估改用 batch
+- [ ] **排程與回授頻率 review** — consolidateLearning 是否改為每 6/12 小時？
 
 ### Phase 2 開發（全面驗證通過後啟動）
 
 - [ ] 確認 Phase 2 需求範圍
 - [ ] 附件重新命名（D/A/F 版本管理）
 - [ ] 精確子類型碼自動判斷
-- [ ] **Unknown sender 附件安全** — 決定防護做法（是否對 FX/TX 未知來源信件不下載附件？掃毒 API？僅儲存不開啟？）避免 Drive 存入惡意檔案
-- [ ] **Token 消耗量全面盤點** — Phase 2 功能完成後，盤點所有 Gemini API 呼叫的 token 消耗：每封信分類、`consolidateLearning` 歸納、回授評估（`runEvaluation`）、未來新增的任何 LLM 呼叫。計算各環節單次成本 + 每日/每週總成本估算
+- [ ] **Unknown sender 附件安全**
+- [ ] **Token 消耗量全面盤點**
 
 ### Phase 3 規劃（客戶端導入後）
 
-- [ ] **附件版本標示（D/A/F 第幾版）** — 是否需要查詢 Drive 過往檔案才能正確標示版本號？還是根據 email 上下文內容就能判斷？可能要實際導入客戶端才有足夠案例驗證
-- [ ] **Prompt injection 防護** — 郵件主題/內文可能包含惡意 prompt attack 內容，需加入輸入清洗或 output 驗證機制
-- [ ] **Unknown sender / 自動辨識附件政策** — 未知來源（FX/TX）和自動辨識來源的信件，是否一律不下載附件？待 Phase 2 安全方案確定後實作
-- [ ] **自動辨識狀態追蹤** — 建立定期檢查函式，掃描之前被標為「自動辨識來源」的信件，確認哪些已被人工確認/修正、哪些仍 pending，產出統計報告
+- [ ] 附件版本標示（D/A/F 第幾版）
+- [ ] Prompt injection 防護
+- [ ] Unknown sender / 自動辨識附件政策
+- [ ] 自動辨識狀態追蹤
 
 ---
 
 ## Completed
+
+### 2026-03-16（Fix 5: API 400 失敗處理 — deploy @25-@28）
+
+**Fix 5: API 400 錯誤未標記為失敗**
+- 背景：API 400 時 `_callGeminiBatch` 回傳 FAIL_RESULT（confidence=0, emlFilename=null），但進入 `_determineFinalResult` 產生錯誤的收發碼/problemLabel，且仍執行 Drive 存檔
+- 修正：
+  1. `_processEmailBatch` 加 API 失敗 early return（跳過 `_determineFinalResult`/`_applyLabels`/`_saveEmailToDrive`），掛 `AI/錯誤/處理失敗` 標籤
+  2. 正常處理成功後移除失敗標籤（排程重跑路徑）
+  3. `_appendLogRecords` 改 upsert：同 messageId 有 `[失敗:N]` 時更新該行+重試次數+1，不 append 新行
+  4. `_retryFailedEmails` 補上重試次數欄更新（col 19）
+  5. UI icon 改善：失敗時 `⚠️`，分類 icon 區分嚴重度（`✅`/`⚠️`/`🔴`）
+  6. 信件按時間排序（舊→新），`trialRun` 和 `processEmails` 都生效
+- [x] 10 封 API 400 → 全部 `[失敗:1]`，失敗計數 = 10，無 Drive 存檔 ✅
+- [x] 重跑 → upsert 更新同行，不產生重複 row ✅
+- [x] 改回 API key → 重跑成功，重試次數正確遞增 ✅
+
+### 2026-03-16（驗證 3 Fix + 模擬失敗 + 效益統計）
+
+**Fix 3 驗證：Sender 名單不該有 `@` row** — ✅ 通過
+- [x] 手動刪除髒資料 + 程式碼兩層防守確認
+
+**Fix 2 驗證：runFeedback JSON 有 `sheetCodeCorrected` 欄位** — ✅ 通過
+- [x] `?action=runFeedback` 回應含 `"sheetCodeCorrected": 0`
+
+**模擬處理失敗** — ✅ 通過（deploy @26-@28）
+- [x] 改壞 API key → 10 封全部 `[失敗:1]`，無 Drive 存檔
+- [x] upsert 更新同行，重試次數 +1
+- [x] 改回 API key → 重跑成功，重試次數正確遞增
+
+**效益統計 UI 彈窗** — ✅ 通過（含 bug fix）
+- [x] showStats 彈窗正常 + 設定值即時生效
+
+### 2026-03-16（測試後修正 deploy @19）
+
+**Fix 3: Sender `@` 萬用 row bug**
+- 背景：`_getFeedbackLearnTarget` 在 sender 為空時回傳 `'@' + ''` = `'@'`，`_addSender` 無驗證直接寫入不合法 key
+- 修正：`_getFeedbackLearnTarget` 加 `if (!domain) return null`；`_addSender` 加 guard clause 拒絕空/`@`/過短 key
+- 測試方法：`?action=getSheetData&tab=Sender名單&search=@` 檢查是否有 `@` row
+- ✅ 預期：Sender名單無 `@` row；空 sender 不再觸發學習
+- ❌ 可能錯誤：
+  - snapshot 本身已有 `@` row → 需手動刪除
+  - 其他路徑繞過 guard → `_addSender` 是唯一寫入點，已覆蓋
+- [x] 已部署 @19
+
+**Fix 2: runFeedback Part 3 counter 缺漏**
+- 背景：Part 3（Sheet 直填收發碼）用獨立 `sheetCodeLearned` counter，不計入 feedbackStats，JSON 回傳 `corrected: 0` 但實際有修正
+- 修正：Part 3 新增 `sheetCodeCorrected` counter，每次更新 correction source 時 increment，加入 feedbackStats JSON
+- 測試方法：下次 `runFeedback` 檢查 JSON 回應
+- ✅ 預期：JSON 有 `sheetCodeCorrected` 欄位，值 > 0 當 Part 3 有處理時
+- ❌ 可能錯誤：
+  - Part 3 跳過所有 row → sheetCodeCorrected=0（正確行為）
+  - 欄位名與前端不符 → 純 JSON 回報，無前端依賴
+- [x] 已部署 @19
+
+**Fix 1: Snapshot/Restore Drive 檔名還原**
+- 背景：snapshot 只存 file ID，restore 只 trash 新檔案但不還原改名/搬移的舊檔案，測試後 Drive 殘留修改過的名字
+- 修正：`_snapshotDriveFileIds()` → `_snapshotDriveFiles()` 存 `{id, name, folderId}`；restore 加 rename + moveTo 邏輯；向下相容舊格式
+- 測試方法：Snapshot → swapLabels 改碼 → runFeedback → Restore → 確認 Drive 檔名改回
+- ✅ 預期：restore 後 Drive 檔案名稱和位置完全回復；log 顯示 `renamed X, moved X`
+- ❌ 可能錯誤：
+  - 舊格式 snapshot 無名稱資訊 → 向下相容只做 trash（與舊行為一致）
+  - DriveApp API quota → rename/move 各算一次 API call，大量檔案可能逾時
+- [x] 已部署 @19
+
+**v3.1 修復 2（碼改名）** — 除 Drive 日期 bug 外全部通過
+- [x] swapLabels FA→FC（同方向碼）+ removeLabel 自動辨識來源
+- [x] runFeedback → status=`corrected`, finalCode=`FC`, corrSource=`tag_change+sheet_code` ✅
+- [x] Sender 學習：`@tilleke.com = C`（FA→FC 的 C） ✅
+- [x] 黃金測試集新增 ✅
+- [x] Restore 驗證：Sheet 回復 pending ✅，Sender 清除 ✅，Gmail labels 回復 ✅
+
+**v3.2 測試 5（修正垃圾回授）** — ✅ 全部通過
+- [x] swapLabels 垃圾→FC + removeLabel 自動辨識來源
+- [x] runFeedback → status=`corrected`, finalCode=`FC`, corrSource=`tag_change+sheet_code` ✅
+- [x] Sender 名單：`@questel.com` 角色=`C`，備註=`Sheet直填垃圾→FC` ✅
+- [x] Drive 搬遷 ✅
+- [x] Restore 驗證：Sheet 回復 pending ✅，Sender 清除 ✅，Gmail labels 回復 ✅
+- [x] ~~已知限制：snapshot/restore 不復原 Drive 檔名~~ → Fix 1 已解決
+
+### 2026-03-16（自動測試 — 第二輪）
+
+**Code.gs doGet 補 3 actions + deploy @17**
+- 背景：效益統計、重試失敗等功能無法透過 doGet 觸發，自動測試無法執行
+- 修正：在 doGet switch 加入 `updateBenefitsStats`（→ `_reconcileBenefitsStats()`）、`reconcileBenefitsStats`、`retryFailed`（→ `_retryFailedEmails()`）
+- 測試方法：clasp push + deploy → Chrome navigate `?action=ping`
+- ✅ 預期：ping 回傳 `{"status":"ok"}`
+- ❌ 可能錯誤：
+  - deploy 失敗 → clasp token 過期，需重新 `clasp login`
+  - `_updateBenefitsStats()` 直接呼叫無效 → 改用 `_reconcileBenefitsStats()` 從 log 重建
+- [x] ping 回傳 `{"status":"ok","timestamp":"2026-03-16T19:38:22.418Z","_duration_ms":1}`
+
+**Snapshot 安全網**
+- 背景：runFeedback 會處理所有 pending rows，需要備份以便 restore
+- 修正：N/A（測試前置）
+- 測試方法：`?action=snapshot`
+- ✅ 預期：所有 Sheet tabs + Drive files + Gmail labels 備份成功
+- ❌ 可能錯誤：
+  - 處理紀錄 >100 rows 導致 payload 過大 → 已分 chunks（8 chunks）
+  - Drive 檔案過多逾時 → 只存 file IDs 不存內容
+- [x] Snapshot 完成：125 rows（8 chunks）、149 Drive files、76 Gmail threads、耗時 34.8s
+
+**Step 2: 修正紀錄注入 prompt**
+- 背景：修正紀錄（如「国昊天诚→Cohorizon」）若為 active 應被注入 LLM prompt，consolidated 則不注入
+- 修正：N/A（驗證既有行為）
+- 測試方法：`?action=getSheetData&tab=處理紀錄&search=name_change` 確認狀態 → `?action=trialRun&limit=10` → `?action=getLastLog&search=參考修正紀錄`
+- ✅ 預期：全部 consolidated → log 無 `📎 參考修正紀錄`（正確不注入）；若有 active → log 有此訊息
+- ❌ 可能錯誤：
+  - 修正紀錄仍為 active 但未被注入 → `_getActiveCorrections()` 查詢 bug
+  - consolidated 後仍被注入 → 過濾條件未排除 `+consolidated`
+- [x] 3 筆修正紀錄全部 `name_change+consolidated`
+- [x] trialRun 10 封成功（10 autoIdentify, 66s）
+- [x] getLastLog matchCount=0 → 正確不注入 ✅ PASS
+
+**Step 3: FA+TA 衝突 + 垃圾信確認（合併測試）**
+- 背景：同 thread 的 FA 和 TA 信件，runFeedback 確認時 TA 不應被改為 FA。垃圾信確認後應學習 Sender
+- 修正：N/A（驗證既有行為）
+- 測試方法：
+  1. 取 KOIT20004TUS7 的 TA msgId `19ce4a93f5078d7b` + 垃圾信 siltstone msgId `19ce85ba8837ea27`
+  2. 兩封都 addLabel `AI/狀態/自動辨識來源` → removeLabel（模擬使用者確認）
+  3. `?action=runFeedback` 一次處理所有 109 筆 pending
+  4. 分開驗證兩個場景
+- ✅ 預期：
+  - FA+TA：TA row 狀態=confirmed，碼仍為 TA（非 corrected/FA）
+  - 垃圾信：siltstone 狀態=confirmed，Sender名單出現角色=S
+- ❌ 可能錯誤：
+  - TA 被 runFeedback 改成 FA → `_checkFeedback` 的 thread 比對邏輯 bug
+  - Sender 學習未觸發 → `_addSender` 條件未涵蓋垃圾確認
+- [x] runFeedback：checked 109, confirmed 3, corrected 0
+- [x] KOIT20004TUS7 TA row (`19ce4a93f5078d7b`): 狀態=`confirmed`，碼=**TA** ✅
+- [x] KOIT20004TUS7 FA row (`19ce3f89e553f539`): 狀態=`confirmed`，碼=**FA** ✅
+- [x] siltstone (`19ce85ba8837ea27`): 狀態=`confirmed`，碼=垃圾 ✅
+- [x] Sender名單：`jacob.varghese@siltstone.com` 角色=**S**，備註=`AI推斷確認-Siltstone Capital` ✅
+
+**Step 4: 回授評估系統**
+- 背景：黃金測試集 → 定期評估 → 修正統計，形成品質迴圈
+- 修正：N/A（驗證既有行為）
+- 測試方法：
+  1. `?action=seedGoldenSet` → 確認黃金測試集有資料
+  2. 搜尋 KOIT20004TUS7 → 確認 Step 3 confirmed 的 rows 自動加入
+  3. `?action=runEvaluation`（async 排程）→ 90s 後查評估紀錄
+  4. `?action=updateCorrectionStats` → 查修正統計
+- ✅ 預期：
+  - 黃金測試集有 KOIT20004TUS7 confirmed rows
+  - 評估紀錄有 detail rows（每筆 golden set item）+ summary row
+  - 修正統計有本週數據
+- ❌ 可能錯誤：
+  - seedGoldenSet 重複加入 → 應 deduplicate by messageId
+  - runEvaluation async trigger 未執行 → 檢查 `?action=status`
+- [x] seedGoldenSet 成功
+- [x] KOIT20004TUS7 的 TA+FA 兩筆 confirmed rows 自動加入黃金測試集 ✅
+- [x] runEvaluation 完成：eval-20260317-0352，9 筆 detail + 1 summary
+- [x] 評估結果：收發碼正確率 **100%**，語義名平均分數 **0.82**，pass rate **55.6%**
+- [x] updateCorrectionStats 成功：本週 120 封，3 筆語義名修正，錯誤率 **2.5%** ✅
+
+**Step 5: 效益統計**
+- 背景：需驗證 `updateBenefitsStats`（新加的 doGet action）能從 log 重建統計，且重複執行不會產生重複 rows
+- 修正：doGet `updateBenefitsStats` 和 `reconcileBenefitsStats` 都指向 `_reconcileBenefitsStats()`（從 log 重建）
+- 測試方法：
+  1. 記錄現有效益統計（2 天，30 封）
+  2. `?action=updateBenefitsStats`（第一次）
+  3. `?action=updateBenefitsStats`（第二次，驗證不重複）
+  4. 再查效益統計確認 row 數不變
+- ✅ 預期：從 log 重建完整日數據，重複執行不新增重複 rows，累計值正確
+- ❌ 可能錯誤：
+  - 日期比對失敗導致重複 rows → `_reconcileBenefitsStats` 的 existingDates 查詢需正確
+  - 失敗/放棄紀錄被計入 → 應排除 `[失敗:` 和 `[放棄]` 前綴
+- [x] 第一次 updateBenefitsStats：從 2 天擴展到 **5 天**（3/13~3/17，從 log 重建歷史）
+- [x] 第二次 updateBenefitsStats：仍為 **5 天**（非 10 天），同日 row 更新而非新增 ✅
+- [x] 最終數據：**134 封處理**、省下 **12.28 小時**、API 成本 **$0.11 USD**、累計值逐日遞增 ✅
+
+### 2026-03-16（第一輪）
+
+**部署** — clasp push + deploy，v3.3.2 @6→@16（含多次迭代修正）
+- [x] Code.gs 透過 clasp 推送（不需手動複製）
+- [x] setupAll() 無報錯、Sheet tabs 正確
+- [x] Sender 名單 dropdown 已更新（C/A/G/S）
+- [x] 標籤顏色已設定（垃圾=灰色）
+
+**測試基礎設施重構 — 格式保留還原 + Factory Reset**
+- [x] Snapshot → Restore 完整還原（Sheet + Drive 14 files + Gmail 8 threads → +10 → restore 精確回到 14）
+- [x] Factory Reset（Drive 0, Gmail 0, Sheet 7 tabs rebuilt）
+- [x] Async trigger（consolidateLearning scheduled + status completed）
+
+**v3.2.1 修正與簡化**
+- [x] 標籤簡化：收發碼+案件類型，無多餘「未分類」；垃圾信標籤正確
+- [x] 草稿過濾：trialRun 50封處理紀錄無草稿
+- [x] Spam sender 學習（完整 email）：lexisnexis → Sender名單 S + bug fix v3.3.2@8
+- [x] 多案號 bug 修正：KOIS23004BGB5 + KOIS18001TFR1 thread 3封驗證（v3.3.2@10, 100封）
+- [x] 備註截斷 80 字元：⏭️ 跳過（測試資料無長公司名）
+- [x] 小圖片過濾 <3KB：3 張 clip_image 過濾成功
+- [x] 客戶名不在語義名：eml_filename 不含客戶公司名
+
+**Bug fix: Sender備註缺少公司名**（v3.3.2@12）
+- [x] _lookupDomainName 快取過期 + _addSender 備註更新 + Part 1.5 備註補查 + title cleanup
+- [x] tronfuture.com → Tron Future 創未來科技 ✅；lexisnexis → 無法辨識公司 ✅
+
+**回授改名測試**（v3.3.2@12）
+- [x] 3 筆修正（国昊/國昊/国昊天诚 → Cohorizon）→ renamed: 6, renameErrors: 0
+- [x] Rows 32/79/107 全部改名成功 + 3 筆自動加入黃金測試集
+
+**consolidateLearning 學習整理**（v3.3.2@16）
+- [x] 根因：`GEMINI_CONSOLIDATION_MODEL` 指向已過期的 `gemini-2.5-pro-preview-06-05`（404）
+- [x] 修正：統一改為 `gemini-3-flash-preview` + 加強 error logging
+- [x] 重跑結果：3 筆修正 → 1 條 L11 規則（KOI 前綴用 Cohorizon）
+- [x] Rows 32/79/107 修正來源標記 `name_change+consolidated` ✅
+- [x] runEvaluation 60 秒後自動觸發 ✅
+
+**以下項目已在上述測試中覆蓋（原分散在 v3.1/v3.2/全面驗證）：**
+- [x] v3.1 修復 3（簽名圖片過濾）→ v3.2.1 測試 6（小圖片 <3KB 過濾成功）
+- [x] v3.1 修復 4（thread_context 污染）→ v3.2.1 測試 4（多案號 KOIS18001TFR1 thread 驗證通過）
+- [x] v3.1 新功能（公司名稱查詢）→ Sender備註 bug fix（tronfuture.com + lexisnexis 驗證通過）
+- [x] v3.2 測試 2（已知 Spam sender）→ v3.2.1 測試 3（lexisnexis 角色=S，無自動辨識來源標籤）
+- [x] v3.2 測試 4（確認垃圾回授）→ v3.2.1 測試 3（runFeedback confirmed + Sender名單更新）
+- [x] v3.2 測試 6（dropdown）→ 部署時已確認 C/A/G/S
+- [x] v3.2 測試 7（標籤顏色）→ 部署時已設定
+- [x] Step 0 部署 → clasp push + deploy 完成
+- [x] Step 1 標籤系統 → trialRun 確認三層巢狀標籤正確
+- [x] Step 2 名稱修正回饋 → 回授改名測試通過（3 筆 Cohorizon）
+- [x] Step 2 標籤修正回饋 → Spam sender 確認流程通過
+- [x] Step 3 Fix 1（consolidateLearning → L11 規則）→ 通過
+- [x] Step 3 Fix 2（+consolidated 標記 + 排除 few-shot）→ 通過
+- [x] Step 5 consolidateLearning 觸發 runEvaluation → 通過
+- [x] v3.3 SYSTEM_PROMPT 更新已部署（含在每次 clasp push 中）
+- [x] Step 4 SYSTEM_PROMPT 微調 — 50/100 封 trialRun 已用最新 PROMPT，結果正確（告知-確認收到{事項}、送件報告-BSKB 等格式已驗證）
+- [x] v3.3 Excel V22 規則同步 — 所有 SYSTEM_PROMPT 更新已含在每次 clasp push，trialRun 已驗證新事項碼正確產出
 
 ### 2026-03-15
 - [x] Bug fix: LLM confidence 遺失未被偵測導致 Sheet 誤標失敗（三層修復：`_parseGeminiResponse` 區分遺失 vs 0、`_callGeminiBatch` 不完整結果觸發重試+fallback、Sheet 紀錄邏輯不再因 confidence=0 標失敗）

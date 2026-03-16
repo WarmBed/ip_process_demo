@@ -1,8 +1,9 @@
 # IP Winner Email Processor V3 — 工程架構文件
 
-> 版本：1.2
-> 最後更新：2026-03-15
-> 程式碼：`email-processor/Code.gs`（~5,100+ 行，單檔部署）
+> 版本：1.3
+> 最後更新：2026-03-16
+> 程式碼：`email-processor/Code.gs`（~4,800+ 行，單檔部署）
+> 部署：clasp push + deploy @28
 
 ---
 
@@ -369,7 +370,7 @@ sender 不在名單 + LLM 推斷成功
 | 重跑產生重複檔案 | 無偵測 | ✅ 同名同大小 skip |
 | 公共 email 加為客戶 | @gmail.com 代表整個 gmail | ✅ PUBLIC_DOMAINS |
 | T 方向回饋學到自己 | 用寄件人學習 | ✅ 用收件人 |
-| Drive 改名日期偏移 | Sheet Date 時區轉換 | ✅ getSpreadsheetTimeZone() |
+| Drive 改名日期偏移 | `appsscript.json` timeZone 為 LA，`getValues()` 用 LA 時區解讀 Date serial → 日期偏移一天 | ✅ `appsscript.json` timeZone 改為 `Asia/Taipei`，與 spreadsheet/檔案命名一致 |
 | Sender 名單重複 | 無去重 | ✅ 寫入前掃描 |
 | 回授互相覆蓋 | Part 2 覆蓋 Part 1 | ✅ indexOf + 串接 |
 | TC 用過期期限 | LLM 不知信件日期 | ✅ 傳入 email_date |
@@ -469,6 +470,11 @@ apps-script/
 ├── ui.gs              ← 選單、對話框
 └── main.gs            ← setupAll、processEmails 入口
 ```
+
+### Timezone 多客戶考量
+- `appsscript.json` 的 `timeZone` 影響 `getValues()` 解讀 Date serial number 的結果
+- SaaS 化後，每個客戶的 script timezone 必須與其 spreadsheet timezone 對齊，否則日期欄會偏移
+- 建議：部署時從 `SpreadsheetApp.getActive().getSpreadsheetTimeZone()` 讀取，寫入 CONFIG 或動態使用，避免硬編碼
 
 ### 需可設定化的項目
 - 案號 regex 格式

@@ -1,6 +1,6 @@
 /**
  * ============================================================
- * IP Winner Email Processor V3
+ * IP Winner Email Processor V3 — deployed @28 2026-03-16 16:25
  * ============================================================
  *
  * 【新安裝】
@@ -110,7 +110,7 @@ const CONFIG = {
   CASE_CATEGORIES: ['專利', '商標', '未分類'],
 
   // 評估系統
-  GEMINI_CONSOLIDATION_MODEL: 'gemini-2.5-pro-preview-06-05',
+  GEMINI_CONSOLIDATION_MODEL: 'gemini-3-flash-preview',
   EVAL_BATCH_SIZE: 10,
   GOLDEN_SET_MAX: 200,
   REGRESSION_THRESHOLD_PP: 5,
@@ -278,6 +278,16 @@ function setupAll() {
   // 3. 建立四張 Sheet Tab
   _setupSheets(ss);
 
+  // 3.5 既有 LOG Sheet 欄位 migration：自動補上缺少的 header
+  const logSheet = ss.getSheetByName(CONFIG.SHEET_NAMES.LOG);
+  if (logSheet) {
+    const headerRow = logSheet.getRange(1, 1, 1, logSheet.getLastColumn()).getValues()[0];
+    if (headerRow.length < 24 || String(headerRow[23]).trim() !== '修正案號') {
+      logSheet.getRange(1, 24).setValue('修正案號').setFontWeight('bold').setBackground('#4a86c8').setFontColor('white');
+      Logger.log('📋 LOG Sheet 補上「修正案號」欄位 (col 24)');
+    }
+  }
+
   // 4. 建立 Gmail 標籤
   _ensureLabels();
 
@@ -410,7 +420,7 @@ function _setupSheets(ss) {
   //  9: AI信心  10: AI案件類別  11: 來源確認狀態  12: 資料夾連結
   //  13: 最終收發碼  14: 修正後名稱  15: 修正原因
   //  16: 修正時間  17: 修正來源  18: 重試次數
-  //  19: Input Tokens  20: Output Tokens  21: dates_found  22: 錯誤備註  22: 錯誤備註
+  //  19: Input Tokens  20: Output Tokens  21: dates_found  22: 錯誤備註  23: 修正案號
   if (!ss.getSheetByName(CONFIG.SHEET_NAMES.LOG)) {
     const s = ss.insertSheet(CONFIG.SHEET_NAMES.LOG);
     s.appendRow([
@@ -419,7 +429,7 @@ function _setupSheets(ss) {
       'AI信心', 'AI案件類別', '來源確認狀態', '資料夾連結',
       '最終收發碼', '修正後名稱', '修正原因',
       '修正時間', '修正來源', '重試次數',
-      'Input Tokens', 'Output Tokens', 'dates_found', '錯誤備註',
+      'Input Tokens', 'Output Tokens', 'dates_found', '錯誤備註', '修正案號',
     ]);
     s.getRange('1:1').setFontWeight('bold').setBackground('#4a86c8').setFontColor('white');
     s.setFrozenRows(1);
@@ -2127,20 +2137,52 @@ function _appendLogRecords(records) {
   if (!records || records.length === 0) return;
   const ss = _getSpreadsheet();
   const sheet = ss.getSheetByName(CONFIG.SHEET_NAMES.LOG);
-  const rows = records.map(r => [
-    r.messageId, r.date, r.originalSubject, r.sender,
-    r.aiCode, r.inferredRole,
-    r.filingCaseNumbers || '',   // col 6: 歸檔案號（實際存檔用的）
-    r.allCaseNumbers || '',      // col 7: 內文案號（全部偵測到的）
-    r.aiSemanticName,
-    r.confidence, r.caseCategory, r.sourceStatus,
-    r.folderUrls || '',          // col 12: 資料夾連結
-    '', '', '', '', '', 0,
-    r.inputTokens || 0, r.outputTokens || 0,
-    r.datesFound || '',          // col 21: dates_found (JSON string)
-    r.errorNote || '',           // col 22: 錯誤備註
-  ]);
-  sheet.getRange(sheet.getLastRow() + 1, 1, rows.length, rows[0].length).setValues(rows);
+
+  // 讀取現有資料，建立 messageId → [失敗行] 的索引（用於 upsert）
+  const existingData = sheet.getDataRange().getValues();
+  const failedRowMap = {};  // messageId → { rowIdx (1-based), retryCount }
+  for (let i = 1; i < existingData.length; i++) {
+    const id = String(existingData[i][0]).trim();
+    const aiName = String(existingData[i][8] || '');
+    const failMatch = aiName.match(/^\[失敗:(\d+)\]/);
+    if (id && failMatch) {
+      failedRowMap[id] = { rowIdx: i + 1, retryCount: parseInt(failMatch[1], 10) };
+    }
+  }
+
+  const toAppend = [];
+  for (let j = 0; j < records.length; j++) {
+    var r = records[j];
+    var row = [
+      r.messageId, r.date, r.originalSubject, r.sender,
+      r.aiCode, r.inferredRole,
+      r.filingCaseNumbers || '',   // col 6: 歸檔案號（實際存檔用的）
+      r.allCaseNumbers || '',      // col 7: 內文案號（全部偵測到的）
+      r.aiSemanticName,
+      r.confidence, r.caseCategory, r.sourceStatus,
+      r.folderUrls || '',          // col 12: 資料夾連結
+      '', '', '', '', '', 0,
+      r.inputTokens || 0, r.outputTokens || 0,
+      r.datesFound || '',          // col 21: dates_found (JSON string)
+      r.errorNote || '',           // col 22: 錯誤備註
+      '',                          // col 23: 修正案號
+    ];
+
+    var existing = failedRowMap[r.messageId];
+    if (existing) {
+      // Upsert: 同 messageId 有 [失敗:N] 行 → 更新該行，重試次數 +1
+      row[18] = existing.retryCount + 1;  // col 18: 重試次數
+      sheet.getRange(existing.rowIdx, 1, 1, row.length).setValues([row]);
+      Logger.log('  📝 Upsert: messageId ' + r.messageId.substring(0, 12) + '... 更新第 ' + existing.rowIdx + ' 行（重試 ' + row[18] + '）');
+    } else {
+      toAppend.push(row);
+    }
+  }
+
+  // 批次 append 新行
+  if (toAppend.length > 0) {
+    sheet.getRange(sheet.getLastRow() + 1, 1, toAppend.length, toAppend[0].length).setValues(toAppend);
+  }
 }
 
 function _setSetting(key, value) {
@@ -2160,17 +2202,29 @@ function _addSender(emailOrDomain, role, note) {
   const ss = _getSpreadsheet();
   const senderSheet = ss.getSheetByName(CONFIG.SHEET_NAMES.SENDERS);
   const key = emailOrDomain.toLowerCase();
+  if (!key || key === '@' || key.length < 3) {
+    Logger.log('  ⚠️ Sender 跳過（不合法）: "' + emailOrDomain + '"');
+    return;
+  }
   const newRole = role.toUpperCase();
 
   // 檢查是否已存在（比對第 1 欄的 email/domain）
   const data = senderSheet.getDataRange().getValues();
   for (let i = 1; i < data.length; i++) {  // 跳過 header
     if (String(data[i][0]).toLowerCase() === key) {
-      // 已存在 → 更新角色和備註（如果角色不同才更新）
+      // 已存在 → 更新角色（如果不同）和備註（如果新備註更完整）
+      var changed = false;
       if (String(data[i][1]).toUpperCase() !== newRole) {
         senderSheet.getRange(i + 1, 2).setValue(newRole);
-        senderSheet.getRange(i + 1, 3).setValue(note || '');
-        Logger.log('  📝 Sender 更新: ' + key + ' ' + data[i][1] + '→' + newRole);
+        changed = true;
+      }
+      var existingNote = String(data[i][2] || '');
+      if (note && note !== existingNote && note.length > existingNote.length) {
+        senderSheet.getRange(i + 1, 3).setValue(note);
+        changed = true;
+      }
+      if (changed) {
+        Logger.log('  📝 Sender 更新: ' + key + ' → ' + newRole + ' / ' + (note || existingNote));
       }
       return;
     }
@@ -2463,12 +2517,66 @@ function _findExistingFile(existingFiles, baseName, ext, blobSize) {
 
 // ===================== 核心處理 =====================
 
-function _determineFinalResult(preprocessed, llmResult) {
+/**
+ * 在同 thread 中搜尋已修正的案號（往後 cascade 用）
+ * 只看時間早於或等於當前信件的修正，取最新一筆
+ * @param {GmailMessage} message - 當前信件
+ * @param {Array[]} logData - LOG sheet 全部資料（含 header）
+ * @return {{ correctedCaseNumbers: string[], sourceRow: number } | null}
+ */
+function _lookupThreadCorrectedCase(message, logData) {
+  try {
+    const threadMessages = message.getThread().getMessages();
+    const currentDate = message.getDate();
+
+    // 收集同 thread 中時間 <= 當前信件的 messageId
+    const eligibleIds = new Set();
+    for (const msg of threadMessages) {
+      if (msg.getDate() <= currentDate) {
+        eligibleIds.add(msg.getId());
+      }
+    }
+
+    // 在 logData 中搜尋這些 messageId，找 col 23（修正案號）非空的
+    let bestRow = -1;
+    let bestDate = null;
+    let bestCorrected = null;
+
+    for (let i = 1; i < logData.length; i++) {
+      const rowMsgId = String(logData[i][0]).trim();
+      if (!eligibleIds.has(rowMsgId)) continue;
+
+      const correctedVal = String(logData[i][23] || '').trim();
+      if (!correctedVal) continue;
+
+      // 取最新的修正（用 Sheet 裡的日期排序）
+      const rowDate = logData[i][1] instanceof Date ? logData[i][1] : new Date(String(logData[i][1]));
+      if (!bestDate || rowDate >= bestDate) {
+        bestDate = rowDate;
+        bestRow = i;
+        bestCorrected = correctedVal;
+      }
+    }
+
+    if (bestCorrected) {
+      const correctedCaseNumbers = bestCorrected.split(/,\s*/).filter(cn => cn.length > 0);
+      if (correctedCaseNumbers.length > 0) {
+        return { correctedCaseNumbers: correctedCaseNumbers, sourceRow: bestRow };
+      }
+    }
+  } catch (e) {
+    Logger.log('⚠️ _lookupThreadCorrectedCase 失敗: ' + e.message);
+  }
+  return null;
+}
+
+function _determineFinalResult(preprocessed, llmResult, threadCorrection) {
   const hasSubjectCase = preprocessed.subjectCaseNumbers && preprocessed.subjectCaseNumbers.length > 0;
 
   // 歸檔案號邏輯：
-  //   主旨有案號 → 優先用 LLM 的 filingCaseNumbers，fallback 用主旨案號
-  //   主旨無案號 → 不歸案號資料夾（用客戶碼或無案號）
+  //   1. 主旨有案號 → 優先用 LLM 的 filingCaseNumbers，fallback 用主旨案號
+  //   2. 主旨無案號 + threadCorrection 有值 → 用修正案號歸檔
+  //   3. 主旨無案號 + 無 threadCorrection → 用客戶碼或無案號
   let filingCaseNumbers = [];
   if (hasSubjectCase) {
     const llmFiling = llmResult.filingCaseNumbers || [];
@@ -2484,6 +2592,10 @@ function _determineFinalResult(preprocessed, llmResult) {
     } else {
       filingCaseNumbers = llmFiling.length > 0 ? llmFiling : preprocessed.subjectCaseNumbers;
     }
+  } else if (threadCorrection && threadCorrection.correctedCaseNumbers && threadCorrection.correctedCaseNumbers.length > 0) {
+    // 主旨無案號，但同 thread 有修正案號 → 套用修正
+    filingCaseNumbers = threadCorrection.correctedCaseNumbers;
+    Logger.log('📎 Thread 修正案號套用: ' + filingCaseNumbers.join(', '));
   }
 
   // 分類邏輯：用歸檔案號的第10碼判定（不用主旨案號，因為 LLM 可能修正）
@@ -2616,6 +2728,9 @@ function _processEmailBatch(query, limit, shouldDownload) {
     if (searchStart >= 500) break;
   }
 
+  // 按信件日期排序（舊→新），確保處理順序一致
+  messages.sort(function(a, b) { return a.getDate().getTime() - b.getDate().getTime(); });
+
   Logger.log('取得 ' + messages.length + ' 封待處理信件');
 
   // 建立 Drive 資料夾快取（整個批次共用）
@@ -2625,6 +2740,10 @@ function _processEmailBatch(query, limit, shouldDownload) {
     const rootFolder = _getDriveRootFolder();
     folderCache = _createFolderCache(rootFolder);
   }
+
+  // 載入 LOG sheet 資料（供 thread 修正案號查詢用，整個批次共用）
+  const logSheet = _getSpreadsheet().getSheetByName(CONFIG.SHEET_NAMES.LOG);
+  const logData = logSheet ? logSheet.getDataRange().getValues() : [];
 
   // 分批並行處理：每批 PARALLEL_BATCH 封同時呼叫 Gemini
   const PARALLEL_BATCH = 10;
@@ -2679,7 +2798,32 @@ function _processEmailBatch(query, limit, shouldDownload) {
       const emailIdx = batchStart + i + 1;
 
       try {
-        const finalResult = _determineFinalResult(preprocessed, llmResult);
+        // API 失敗（confidence=0 且無語義名）→ 掛失敗標籤 + 寫 Sheet + 跳過 Drive/標籤
+        if (!llmResult.emlFilename && llmResult.confidence === 0) {
+          var errLabel = _getLabel('錯誤/處理失敗');
+          if (errLabel) preprocessed._message.getThread().addLabel(errLabel);
+          _appendLogRecords([{
+            messageId: messageId, aiCode: preprocessed.sendReceiveCode || '',
+            date: Utilities.formatDate(preprocessed.date, 'Asia/Taipei', 'yyyy-MM-dd HH:mm'),
+            originalSubject: preprocessed.originalSubject,
+            sender: preprocessed.sender,
+            inferredRole: '', filingCaseNumbers: '', allCaseNumbers: preprocessed.caseNumbers.join(', '),
+            aiSemanticName: '[失敗:1] LLM 未產生語義名', confidence: 0,
+            caseCategory: '', sourceStatus: 'na',
+            inputTokens: llmResult.tokenInfo ? llmResult.tokenInfo.inputTokens : 0,
+            outputTokens: llmResult.tokenInfo ? llmResult.tokenInfo.outputTokens : 0,
+          }]);
+          stats.processed++;
+          stats.errors++;
+          Logger.log('❌ #' + emailIdx + ' API 失敗，標記 [失敗:1]');
+          continue;
+        }
+
+        // 主旨無案號時查詢同 thread 是否有修正案號
+        const threadCorrection = (!preprocessed.subjectCaseNumbers || preprocessed.subjectCaseNumbers.length === 0)
+          ? _lookupThreadCorrectedCase(preprocessed._message, logData)
+          : null;
+        const finalResult = _determineFinalResult(preprocessed, llmResult, threadCorrection);
 
         // Log 每封信的分類結果
         const confPct = Math.round((llmResult.confidence || 0) * 100);
@@ -2692,6 +2836,10 @@ function _processEmailBatch(query, limit, shouldDownload) {
           + ' (信心: ' + confPct + '%' + filingInfo + ')');
 
         _applyLabels(preprocessed._message, finalResult);
+
+        // 若之前失敗過（排程重跑成功），移除錯誤標籤
+        var errLabel = _getLabel('錯誤/處理失敗');
+        if (errLabel) preprocessed._message.getThread().removeLabel(errLabel);
 
         let folderUrlArr = [];
         let attachmentErrorNote = '';
@@ -2799,6 +2947,9 @@ function _processEmailBatch(query, limit, shouldDownload) {
     stats: stats
   }));
 
+  // 加入 summary icon 讓前端/plugin 可判斷整體狀態
+  stats.summaryIcon = stats.errors > 0 ? '⚠️' : '✅';
+
   _testSaveLog(Logger.getLog().split('\n').filter(Boolean));
   return stats;
 }
@@ -2821,13 +2972,14 @@ function trialRun() {
 
   try {
     const result = _processEmailBatch(q.getResponseText().trim(), 50, true);
-    ui.alert('✅ 試跑完成',
+    var icon = result.errors > 0 ? '⚠️' : '✅';
+    ui.alert(icon + ' 試跑完成',
       '處理 ' + result.processed + ' 封（含下載 EML＋掛標籤）\n\n' +
       '✅ 自動處理: ' + result.auto + '\n' +
       '⚠️ 待確認: ' + result.needConfirm + '\n' +
-      '🔍 自動辨識來源: ' + result.autoIdentify + '\n' +
-      '❓ 未知來源: ' + result.unknown + '\n' +
-      '❌ 失敗: ' + result.errors + '\n\n' +
+      '⚠️ 辨識來源: ' + result.autoIdentify + '\n' +
+      '🔴 未知來源: ' + result.unknown + '\n' +
+      '🔴 失敗: ' + result.errors + '\n\n' +
       '→ 到「處理紀錄」Sheet 查看結果\n' +
       '→ 到 Gmail 搜尋 label:AI/狀態/自動辨識來源 確認 sender',
       ui.ButtonSet.OK);
@@ -2842,9 +2994,11 @@ function trialRunSmall() {
 
   try {
     const result = _processEmailBatch(q.getResponseText().trim(), 10, true);
-    ui.alert('✅ 完成', '處理 ' + result.processed + ' 封\n自動: ' + result.auto +
-      ' | 待確認: ' + result.needConfirm + ' | 辨識來源: ' + result.autoIdentify +
-      ' | 未知: ' + result.unknown + ' | 失敗: ' + result.errors, ui.ButtonSet.OK);
+    var icon = result.errors > 0 ? '⚠️' : '✅';
+    ui.alert(icon + ' 完成', '處理 ' + result.processed + ' 封\n' +
+      '✅ 自動: ' + result.auto + ' | ⚠️ 待確認: ' + result.needConfirm +
+      ' | ⚠️ 辨識來源: ' + result.autoIdentify +
+      ' | 🔴 未知: ' + result.unknown + ' | 🔴 失敗: ' + result.errors, ui.ButtonSet.OK);
   } catch (e) { ui.alert('❌ 失敗', e.message, ui.ButtonSet.OK); }
 }
 
@@ -2887,7 +3041,13 @@ function testSingleEmail() {
     const corrections = _getRecentCorrections(20);
     const templates = _loadTemplates();
     const llmResult = _callGemini(preprocessed, corrections, templates);
-    const finalResult = _determineFinalResult(preprocessed, llmResult);
+    // 查詢同 thread 修正案號
+    const uiLogSheet = _getSpreadsheet().getSheetByName(CONFIG.SHEET_NAMES.LOG);
+    const uiLogData = uiLogSheet ? uiLogSheet.getDataRange().getValues() : [];
+    const uiThreadCorrection = (!preprocessed.subjectCaseNumbers || preprocessed.subjectCaseNumbers.length === 0)
+      ? _lookupThreadCorrectedCase(message, uiLogData)
+      : null;
+    const finalResult = _determineFinalResult(preprocessed, llmResult, uiThreadCorrection);
 
     ui.alert('🔬 單封信分析結果',
       '標題: ' + preprocessed.originalSubject + '\n' +
@@ -3028,7 +3188,11 @@ function _retryFailedEmails() {
 
       const preprocessed = _preprocessMessage(message, senderMap);
       const llmResult = _callGemini(preprocessed, corrections, templates);
-      const finalResult = _determineFinalResult(preprocessed, llmResult);
+      // 查詢同 thread 修正案號
+      const retryThreadCorrection = (!preprocessed.subjectCaseNumbers || preprocessed.subjectCaseNumbers.length === 0)
+        ? _lookupThreadCorrectedCase(message, data)
+        : null;
+      const finalResult = _determineFinalResult(preprocessed, llmResult, retryThreadCorrection);
 
       _applyLabels(message, finalResult);
 
@@ -3056,6 +3220,7 @@ function _retryFailedEmails() {
       sheet.getRange(rowIdx, 11).setValue(finalResult.caseCategory);
       sheet.getRange(rowIdx, 12).setValue(finalResult.sourceStatus);
       sheet.getRange(rowIdx, 13).setValue(folderUrlArr[0] || '');
+      sheet.getRange(rowIdx, 19).setValue(retryCount + 1);  // col 19: 重試次數（1-based）
       sheet.getRange(rowIdx, 22).setValue(attachmentErrorNote);
 
       if (llmResult.emlFilename) {
@@ -3171,6 +3336,7 @@ function _getFeedbackLearnTarget(aiCode, sender, message) {
   if (CONFIG.PUBLIC_DOMAINS.includes(domain)) return targetEmail;
 
   // 專屬 domain → 用 @domain
+  if (!domain) return null;  // domain 為空 → 無法學習
   return '@' + domain;
 }
 
@@ -3188,14 +3354,17 @@ function _renameDriveFilesForCodeChange(row, ss, oldCode, newCode) {
   const rowCategory = String(row[10] || '').trim();
   const semanticName = String(row[8] || '').trim();
 
-  // 組出日期字串
+  // 組出日期字串（必須用 spreadsheet timezone，與檔案命名 Asia/Taipei 一致）
   let dateStr = '';
+  const ssTz = ss.getSpreadsheetTimeZone();
   if (rowDate instanceof Date) {
-    const ssTz = ss.getSpreadsheetTimeZone();
     dateStr = Utilities.formatDate(rowDate, ssTz, 'yyyyMMdd');
   } else {
-    const m = String(rowDate).match(/(\d{4})-(\d{2})-(\d{2})/);
-    if (m) dateStr = m[1] + m[2] + m[3];
+    // ISO 字串先轉 Date 再用 spreadsheet timezone 格式化，避免 UTC vs 本地日期不一致
+    const parsed = new Date(String(rowDate));
+    if (!isNaN(parsed.getTime())) {
+      dateStr = Utilities.formatDate(parsed, ssTz, 'yyyyMMdd');
+    }
   }
 
   if (!dateStr || !rowFilingCases) return 0;
@@ -3247,14 +3416,17 @@ function _relocateSpamFiles(rowData, newCode, ss, rowIndex) {
   const semanticName = String(rowData[8] || '').trim();
   const rowFilingCases = String(rowData[6] || '').trim();
 
-  // 組出日期字串
+  // 組出日期字串（必須用 spreadsheet timezone，與檔案命名 Asia/Taipei 一致）
   let dateStr = '';
+  const ssTz = ss.getSpreadsheetTimeZone();
   if (rowDate instanceof Date) {
-    const ssTz = ss.getSpreadsheetTimeZone();
     dateStr = Utilities.formatDate(rowDate, ssTz, 'yyyyMMdd');
   } else {
-    const m = String(rowDate).match(/(\d{4})-(\d{2})-(\d{2})/);
-    if (m) dateStr = m[1] + m[2] + m[3];
+    // ISO 字串先轉 Date 再用 spreadsheet timezone 格式化，避免 UTC vs 本地日期不一致
+    const parsed = new Date(String(rowDate));
+    if (!isNaN(parsed.getTime())) {
+      dateStr = Utilities.formatDate(parsed, ssTz, 'yyyyMMdd');
+    }
   }
 
   if (!dateStr) {
@@ -3345,6 +3517,126 @@ function _relocateSpamFiles(rowData, newCode, ss, rowIndex) {
 }
 
 /**
+ * 修正案號時：搬遷 EML + 附件 到正確的案號資料夾，更新 Sheet + Gmail 標籤
+ * @param {Array} rowData - Sheet 資料列
+ * @param {string[]} correctedCaseNumbers - 修正後的案號陣列
+ * @param {Spreadsheet} ss - Spreadsheet 物件
+ * @param {number} rowIndex - 資料列的 0-based index（在 data 陣列中）
+ */
+function _relocateCaseCorrectedFiles(rowData, correctedCaseNumbers, ss, rowIndex) {
+  const messageId = String(rowData[0]).trim();
+  const rowDate = rowData[1];
+  const rowCode = String(rowData[4] || '').trim();           // AI收發碼
+  const semanticName = String(rowData[8] || '').trim();       // AI語義名
+  const origFiling = String(rowData[6] || '').trim();         // 原歸檔案號
+  const origCategory = String(rowData[10] || '').trim();      // 原案件類別
+
+  // 組出日期字串
+  let dateStr = '';
+  const ssTz = ss.getSpreadsheetTimeZone();
+  if (rowDate instanceof Date) {
+    dateStr = Utilities.formatDate(rowDate, ssTz, 'yyyyMMdd');
+  } else {
+    const parsed = new Date(String(rowDate));
+    if (!isNaN(parsed.getTime())) {
+      dateStr = Utilities.formatDate(parsed, ssTz, 'yyyyMMdd');
+    }
+  }
+
+  if (!dateStr) {
+    Logger.log('  ⚠️ 案號修正搬遷：無法解析日期');
+    return;
+  }
+
+  const rootFolder = _getDriveRootFolder();
+
+  // 判定原始資料夾位置
+  let sourceFolder;
+  const uncatFolder = _getOrCreateFolder(rootFolder, '未分類');
+  if (origFiling && origFiling !== '無案號') {
+    // clientCode 資料夾（如 TRON）在未分類下
+    sourceFolder = _getOrCreateFolder(uncatFolder, origFiling);
+  } else {
+    sourceFolder = _getOrCreateFolder(uncatFolder, '無案號');
+  }
+
+  // 判定目標分類
+  const PATENT_TYPES = 'PMDAC';
+  const TRADEMARK_TYPES = 'TBW';
+  const typeChar = correctedCaseNumbers[0].length >= 10 ? correctedCaseNumbers[0].charAt(9) : '';
+  let targetCategory = '未分類';
+  if (PATENT_TYPES.includes(typeChar)) targetCategory = '專利';
+  else if (TRADEMARK_TYPES.includes(typeChar)) targetCategory = '商標';
+
+  const folderCaseNum = correctedCaseNumbers[0];
+  const caseLabel = correctedCaseNumbers.length > 1
+    ? folderCaseNum + '等' + correctedCaseNumbers.length + '案'
+    : folderCaseNum;
+
+  const catFolder = _getOrCreateFolder(rootFolder, targetCategory);
+  const targetFolder = _getOrCreateFolder(catFolder, folderCaseNum);
+
+  // 組出原始檔名前綴
+  const origCaseLabel = origFiling || '無案號';
+  const oldPrefix = dateStr + '-' + rowCode + '-' + origCaseLabel + '-' + semanticName;
+  const newPrefix = dateStr + '-' + rowCode + '-' + caseLabel + '-' + semanticName;
+
+  // 搜尋並搬遷檔案
+  const files = sourceFolder.getFiles();
+  let movedCount = 0;
+  while (files.hasNext()) {
+    const file = files.next();
+    const name = file.getName();
+    if (name.indexOf(oldPrefix) === 0) {
+      const suffix = name.substring(oldPrefix.length);
+      const newName = newPrefix + suffix;
+      file.setName(newName);
+      file.moveTo(targetFolder);
+      Logger.log('  📦 案號修正搬遷: ' + name + ' → ' + targetFolder.getName() + '/' + newName);
+      movedCount++;
+    }
+  }
+
+  // 多案號時處理其他案號資料夾的副本
+  if (correctedCaseNumbers.length > 1) {
+    for (let c = 1; c < correctedCaseNumbers.length; c++) {
+      const subFolder = _getOrCreateFolder(catFolder, correctedCaseNumbers[c]);
+      // 副案號的 caseLabel 格式也是 caseNum等N案
+      const subNewPrefix = dateStr + '-' + rowCode + '-' + correctedCaseNumbers[c] + '等' + correctedCaseNumbers.length + '案-' + semanticName;
+      // 如果原始是無案號/clientCode，對應的副案號不存在，不需要搬遷，但記錄目標資料夾
+    }
+  }
+
+  // 更新 Sheet
+  const sheet = ss.getSheetByName(CONFIG.SHEET_NAMES.LOG);
+  if (sheet) {
+    sheet.getRange(rowIndex + 1, 7).setValue(correctedCaseNumbers.join(', '));  // col 6 (1-based=7): 歸檔案號
+    sheet.getRange(rowIndex + 1, 11).setValue(targetCategory);                  // col 10 (1-based=11): AI案件類別
+    sheet.getRange(rowIndex + 1, 13).setValue(targetFolder.getUrl());           // col 12 (1-based=13): 資料夾連結
+  }
+
+  // 更新 Gmail 標籤
+  try {
+    const message = GmailApp.getMessageById(messageId);
+    if (message) {
+      const thread = message.getThread();
+      // 移除「無案號」標籤
+      const noCaseLabel = GmailApp.getUserLabelByName(CONFIG.LABEL_PREFIX + '/狀態/無案號');
+      if (noCaseLabel) thread.removeLabel(noCaseLabel);
+      // 加上案件類型標籤
+      if (targetCategory !== '未分類') {
+        const catLabel = _getLabel('案件類型/' + targetCategory);
+        if (catLabel) thread.addLabel(catLabel);
+      }
+    }
+  } catch (labelErr) {
+    Logger.log('  ⚠️ Gmail 標籤更新失敗: ' + labelErr.message);
+  }
+
+  Logger.log('  📦 案號修正搬遷完成: ' + movedCount + ' 個檔案, 案號=' + correctedCaseNumbers.join(', ') + ', 類別=' + targetCategory);
+}
+
+/**
  * 一次性工具：更新既有 Sender名單 Sheet 的 B 欄 data validation，加入 S
  */
 function _migrateSenderDropdown() {
@@ -3372,7 +3664,6 @@ function _migrateSenderDropdown() {
 
 /**
  * 查詢 domain 的公司名稱（從網站 <title> 提取）
- * 結果快取在 Script Properties，避免重複查詢
  * @param {string} domain
  * @returns {string|null} 公司名稱，失敗或不適用時回傳 null
  */
@@ -3382,11 +3673,6 @@ function _lookupDomainName(domain) {
   if (CONFIG.PUBLIC_DOMAINS.includes(domain)) return null;
   if (_isGovDomain(domain)) return null;
   if (CONFIG.OWN_DOMAINS.includes(domain)) return null;
-
-  const cacheKey = 'domain_name_' + domain;
-  const props = PropertiesService.getScriptProperties();
-  const cached = props.getProperty(cacheKey);
-  if (cached !== null) return cached || null; // 空字串 = 查詢失敗過
 
   const urls = [
     'https://' + domain,
@@ -3409,20 +3695,28 @@ function _lookupDomainName(domain) {
       let title = titleMatch[1].trim()
         .replace(/\s+/g, ' ')
         .replace(/\s*[|–—-]\s*(Home|首頁|Homepage|Welcome|Index|Top).*$/i, '')
+        .replace(/^(Home|首頁|Homepage|Welcome|Index|Top)\s*[|–—-]\s*/i, '')
         .replace(/\s*[|–—-]\s*$/, '')
         .trim();
+      // 如果 title 仍含分隔符且超過 30 字元，取最有意義的片段（通常是公司名）
+      if (title.length > 30 && /[|–—]/.test(title)) {
+        var parts = title.split(/\s*[|–—]\s*/);
+        var genericPattern = /\b(Home\s*Page|Homepage|Welcome|Index|Top|Official|Site|Website)\b|首頁|官網|网站/i;
+        // 優先選不含通用網頁用語的片段
+        var meaningful = parts.filter(function(p) { return p.length >= 2 && !genericPattern.test(p); });
+        var candidates = meaningful.length > 0 ? meaningful : parts.filter(function(p) { return p.length >= 2; });
+        candidates.sort(function(a, b) { return a.length - b.length; });
+        if (candidates.length > 0) title = candidates[0];
+      }
 
       if (title.length > 80) title = title.substring(0, 80);
       if (title.length > 0) {
-        props.setProperty(cacheKey, title);
         Logger.log('  🔍 Domain 查詢: ' + domain + ' → ' + title);
         return title;
       }
     } catch (e) { /* try next URL */ }
   }
 
-  // 查詢失敗，快取空字串避免重複嘗試
-  props.setProperty(cacheKey, '');
   Logger.log('  🔍 Domain 查詢失敗: ' + domain);
   return null;
 }
@@ -3513,17 +3807,18 @@ function runFeedback() {
           sheet.getRange(i + 1, 12).setValue('confirmed');
           sheet.getRange(i + 1, 17).setValue(new Date());
           sheet.getRange(i + 1, 18).setValue('tag_change');
-          if (learnTarget && inferredRole) {
-            const roleToLearn = aiCode === '垃圾' ? 'S' : inferredRole;
+          if (aiCode === '垃圾') {
+            // 垃圾信確認 → 一律學習 sender 為 S（用完整 email，避免封鎖整個 domain）
             const domain = _extractDomain(sender);
             const companyName = _lookupDomainName(domain);
             const note = companyName ? 'AI推斷確認-' + companyName : 'AI推斷確認';
-            if (roleToLearn === 'S') {
-              // Spam 用完整 email，避免封鎖整個 domain
-              _addSender(sender, 'S', note);
-            } else {
-              _addSender(learnTarget, roleToLearn, note);
-            }
+            _addSender(sender, 'S', note);
+          } else if (learnTarget && inferredRole) {
+            const roleToLearn = inferredRole;
+            const domain = _extractDomain(sender);
+            const companyName = _lookupDomainName(domain);
+            const note = companyName ? 'AI推斷確認-' + companyName : 'AI推斷確認';
+            _addSender(learnTarget, roleToLearn, note);
           }
           // 加入黃金測試集（confirmed = AI 判斷正確，也是好的測試案例）
           _promoteToGoldenSet(messageId, String(data[i][2]), sender,
@@ -3535,6 +3830,47 @@ function runFeedback() {
     } catch (e) {
       Logger.log('回授(sender)失敗: ' + e.message);
     }
+  }
+
+  // ── Part 1.5: 補查「AI推斷確認」備註中缺少公司名的 Sender ──
+  // 已加入 Sender名單的 sender 不會再觸發自動辨識流程，所以這裡主動補查
+  try {
+    const senderSheet = ss.getSheetByName(CONFIG.SHEET_NAMES.SENDERS);
+    if (senderSheet) {
+      const senderData = senderSheet.getDataRange().getValues();
+      let noteUpdated = 0;
+      for (let s = 1; s < senderData.length; s++) {
+        const currentNote = String(senderData[s][2] || '').trim();
+        // 處理三種情況：(1) 完全沒查過 (2) 公司名過長 (3) 含通用網頁用語（title cleanup 不完善）
+        let needsLookup = false;
+        if (currentNote === 'AI推斷確認') {
+          needsLookup = true;
+        } else if (currentNote.startsWith('AI推斷確認-')) {
+          const companyPart = currentNote.substring('AI推斷確認-'.length);
+          if (companyPart === '無法辨識公司') {
+            // 已確認查不到，不重試
+          } else if (companyPart.length > 30) {
+            needsLookup = true;  // 公司名過長，可能是未清理的 <title>
+          } else if (/\b(Home\s*Page|Homepage|Welcome|Index|Top|Official|Site|Website)\b|首頁|官網|网站/i.test(companyPart)) {
+            needsLookup = true;  // 含通用網頁用語，title cleanup 邏輯已改進
+          }
+        }
+        if (!needsLookup) continue;
+        const emailOrDomain = String(senderData[s][0] || '').trim();
+        const domain = emailOrDomain.startsWith('@') ? emailOrDomain.substring(1) : _extractDomain(emailOrDomain);
+        if (!domain) continue;
+        const companyName = _lookupDomainName(domain);
+        const newNote = companyName ? 'AI推斷確認-' + companyName : 'AI推斷確認-無法辨識公司';
+        senderSheet.getRange(s + 1, 3).setValue(newNote);
+        Logger.log('  🔍 Sender 備註補查: ' + emailOrDomain + ' → ' + newNote);
+        noteUpdated++;
+      }
+      if (noteUpdated > 0) {
+        Logger.log('  📝 Sender 備註更新: ' + noteUpdated + ' 筆');
+      }
+    }
+  } catch (e) {
+    Logger.log('回授(sender備註補查)失敗: ' + e.message);
   }
 
   // ── Part 2: 語義名修正 → Drive 檔案改名 ──
@@ -3563,12 +3899,15 @@ function runFeedback() {
       //    但 Sheets 可能用不同時區（如 America/LA）自動轉成 Date 物件，
       //    再用 Asia/Taipei 格式化回來會飄移日期（如 3/13 → 3/14）
       let dateStr = '';
+      const ssTz = ss.getSpreadsheetTimeZone();
       if (rowDate instanceof Date) {
-        const ssTz = ss.getSpreadsheetTimeZone();
         dateStr = Utilities.formatDate(rowDate, ssTz, 'yyyyMMdd');
       } else {
-        const m = String(rowDate).match(/(\d{4})-(\d{2})-(\d{2})/);
-        if (m) dateStr = m[1] + m[2] + m[3];
+        // ISO 字串先轉 Date 再用 spreadsheet timezone 格式化，避免 UTC vs 本地日期不一致
+        const parsed = new Date(String(rowDate));
+        if (!isNaN(parsed.getTime())) {
+          dateStr = Utilities.formatDate(parsed, ssTz, 'yyyyMMdd');
+        }
       }
 
       // 用歸檔案號組出每個案號資料夾的 baseName
@@ -3620,6 +3959,7 @@ function runFeedback() {
   // 偵測條件：最終收發碼有值 + 修正來源不含 'sheet_code'（代表尚未處理）
   // 適用情況：人員直接在 Sheet 填正確的收發碼（不透過 Gmail label）
   let sheetCodeLearned = 0;
+  let sheetCodeCorrected = 0;
   const freshData2 = sheet.getDataRange().getValues();
   for (let i = 1; i < freshData2.length; i++) {
     const finalCode = String(freshData2[i][13] || '').trim();       // col 13: 最終收發碼
@@ -3653,6 +3993,7 @@ function runFeedback() {
       const newSource = correctionSource ? correctionSource + '+sheet_code' : 'sheet_code';
       sheet.getRange(i + 1, 17).setValue(new Date());    // col 17: 修正時間
       sheet.getRange(i + 1, 18).setValue(newSource);      // col 18: 修正來源
+      sheetCodeCorrected++;
 
       // Sheet 收發碼修正 → 加入黃金測試集
       _promoteToGoldenSet(messageId, String(freshData2[i][2] || ''), sender,
@@ -3660,6 +4001,82 @@ function runFeedback() {
         String(freshData2[i][6] || ''), 'code');
     } catch (e) {
       Logger.log('回授(Sheet收發碼)失敗: ' + e.message);
+    }
+  }
+
+  // ── Part 4: 案號修正 + Thread Cascade ──
+  // 偵測條件：col 23（修正案號）有值 + col 17（修正來源）不含 'case_corrected'
+  let caseCorrected = 0, caseCascaded = 0;
+  const freshData3 = sheet.getDataRange().getValues();
+  for (let i = 1; i < freshData3.length; i++) {
+    const correctedCase = String(freshData3[i][23] || '').trim();       // col 23: 修正案號
+    const correctionSource3 = String(freshData3[i][17] || '').trim();   // col 17: 修正來源
+
+    // 跳過：沒填、已處理過
+    if (!correctedCase || correctionSource3.indexOf('case_corrected') !== -1) continue;
+
+    try {
+      const correctedCaseNumbers = correctedCase.split(/,\s*/).filter(cn => cn.length > 0);
+      if (correctedCaseNumbers.length === 0) continue;
+
+      // a. 修正該列本身
+      _relocateCaseCorrectedFiles(freshData3[i], correctedCaseNumbers, ss, i);
+
+      // 標記修正來源
+      const newSource3 = correctionSource3 ? correctionSource3 + '+case_corrected' : 'case_corrected';
+      sheet.getRange(i + 1, 17).setValue(new Date());       // col 16 (1-based=17): 修正時間
+      sheet.getRange(i + 1, 18).setValue(newSource3);        // col 17 (1-based=18): 修正來源
+      caseCorrected++;
+
+      // b. Thread Cascade：找同 thread 中時間 >= 該信的後續信件
+      const messageId = String(freshData3[i][0]).trim();
+      const message = GmailApp.getMessageById(messageId);
+      if (!message) continue;
+
+      const currentDate = message.getDate();
+      const threadMessages = message.getThread().getMessages();
+
+      // 收集同 thread 中時間 >= 當前信件的其他 messageId
+      const cascadeIds = new Set();
+      for (const msg of threadMessages) {
+        if (msg.getDate() >= currentDate && msg.getId() !== messageId) {
+          cascadeIds.add(msg.getId());
+        }
+      }
+
+      if (cascadeIds.size === 0) continue;
+
+      // 在 LOG sheet 中搜尋這些 messageId 並 cascade
+      for (let j = 1; j < freshData3.length; j++) {
+        if (j === i) continue;
+        const rowMsgId = String(freshData3[j][0]).trim();
+        if (!cascadeIds.has(rowMsgId)) continue;
+
+        const rowFiling = String(freshData3[j][6] || '').trim();
+        const rowSource = String(freshData3[j][17] || '').trim();
+
+        // 只 cascade 無案號狀態的列（空、clientCode、或無案號）
+        // 有正常案號的不動
+        const hasProperCase = rowFiling && rowFiling !== '無案號' && /\d{5}[A-Z]{2,3}\d/.test(rowFiling);
+        if (hasProperCase) continue;
+        if (rowSource.indexOf('case_cascade') !== -1) continue;  // 已 cascade 過
+
+        try {
+          _relocateCaseCorrectedFiles(freshData3[j], correctedCaseNumbers, ss, j);
+
+          // 寫入修正案號 + 標記 cascade
+          sheet.getRange(j + 1, 24).setValue(correctedCase);        // col 23 (1-based=24): 修正案號
+          const cascadeSource = rowSource ? rowSource + '+case_cascade' : 'case_cascade';
+          sheet.getRange(j + 1, 17).setValue(new Date());            // col 16 (1-based=17): 修正時間
+          sheet.getRange(j + 1, 18).setValue(cascadeSource);          // col 17 (1-based=18): 修正來源
+          caseCascaded++;
+          Logger.log('  📎 Cascade: row ' + (j + 1) + ' msgId=' + rowMsgId);
+        } catch (cascErr) {
+          Logger.log('  ⚠️ Cascade 失敗 row ' + (j + 1) + ': ' + cascErr.message);
+        }
+      }
+    } catch (e) {
+      Logger.log('回授(案號修正)失敗: ' + e.message);
     }
   }
 
@@ -3673,7 +4090,11 @@ function runFeedback() {
     '📝 學習: ' + sheetCodeLearned + ' 筆\n\n' +
     '【檔名修正】\n' +
     '📝 改名檔案: ' + renamed + ' 個\n' +
-    (renameErrors > 0 ? '❌ 改名失敗: ' + renameErrors + ' 筆\n' : '');
+    (renameErrors > 0 ? '❌ 改名失敗: ' + renameErrors + ' 筆\n' : '') +
+    ((caseCorrected > 0 || caseCascaded > 0) ?
+      '\n【案號修正】\n' +
+      '📝 直接修正: ' + caseCorrected + ' 筆\n' +
+      '📎 Cascade: ' + caseCascaded + ' 筆\n' : '');
 
   Logger.log(msg);
 
@@ -3684,8 +4105,11 @@ function runFeedback() {
     corrected: corrected,
     pending: checked - confirmed - corrected,
     sheetCodeLearned: sheetCodeLearned,
+    sheetCodeCorrected: sheetCodeCorrected,
     renamed: renamed,
-    renameErrors: renameErrors
+    renameErrors: renameErrors,
+    caseCorrected: caseCorrected,
+    caseCascaded: caseCascaded
   };
   _execProps.setProperty('_execution_status', JSON.stringify({
     action: 'runFeedback',
@@ -3947,6 +4371,10 @@ function exportPromptDoc() {
  */
 function consolidateLearning() {
   const corrections = _getRecentCorrections(100);  // 讀取所有修正紀錄
+  Logger.log('📋 consolidateLearning: 找到 ' + corrections.length + ' 筆修正紀錄');
+  corrections.forEach((c, i) => {
+    Logger.log('  #' + (i+1) + ' subject=' + String(c.subject).substring(0, 50) + ' aiName=' + c.aiName + ' finalName=' + c.finalName);
+  });
 
   if (corrections.length < 3) {
     try {
@@ -3993,21 +4421,34 @@ ${correctionText}
 
   const response = _callConsolidationModel(consolidationPrompt);
 
-  if (response.getResponseCode() !== 200) {
-    Logger.log('❌ 學習整理 LLM 呼叫失敗: ' + response.getResponseCode());
+  const respCode = response.getResponseCode();
+  const respText = response.getContentText();
+  Logger.log('📡 Consolidation LLM 回應碼: ' + respCode);
+  Logger.log('📡 Consolidation LLM 回應（前 500 字）: ' + respText.substring(0, 500));
+
+  if (respCode !== 200) {
+    Logger.log('❌ 學習整理 LLM 呼叫失敗: ' + respCode + ' / ' + respText.substring(0, 300));
     try {
-      SpreadsheetApp.getUi().alert('❌ LLM 呼叫失敗', '錯誤碼: ' + response.getResponseCode(), SpreadsheetApp.getUi().ButtonSet.OK);
+      SpreadsheetApp.getUi().alert('❌ LLM 呼叫失敗', '錯誤碼: ' + respCode, SpreadsheetApp.getUi().ButtonSet.OK);
     } catch (e) {}
     return;
   }
 
   let result;
   try {
-    const respJson = JSON.parse(response.getContentText());
+    const respJson = JSON.parse(respText);
+    Logger.log('📡 Consolidation candidates 數: ' + (respJson.candidates ? respJson.candidates.length : 'N/A'));
+    if (respJson.candidates && respJson.candidates[0]) {
+      const finishReason = respJson.candidates[0].finishReason;
+      Logger.log('📡 Consolidation finishReason: ' + finishReason);
+    }
     const text = respJson.candidates[0].content.parts[0].text;
+    Logger.log('📡 Consolidation LLM 產出文字（前 300 字）: ' + text.substring(0, 300));
     result = JSON.parse(text);
+    Logger.log('📡 Consolidation 解析成功，rules 數: ' + (result.rules ? result.rules.length : 0));
   } catch (e) {
     Logger.log('❌ 學習整理解析失敗: ' + e.message);
+    Logger.log('❌ 原始回應全文: ' + respText.substring(0, 2000));
     try {
       SpreadsheetApp.getUi().alert('❌ 解析失敗', e.message, SpreadsheetApp.getUi().ButtonSet.OK);
     } catch (e2) {}
@@ -4450,7 +4891,7 @@ function runEvaluation() {
       const llmResult = llmResults[j];
       const gc = preprocessed._goldenCase;
 
-      const finalResult = _determineFinalResult(preprocessed, llmResult);
+      const finalResult = _determineFinalResult(preprocessed, llmResult, null);  // 評估不套用 thread 修正
       const evalResult = _evaluateSingleCase(finalResult, llmResult, gc.data);
 
       detailRows.push([
@@ -5065,43 +5506,39 @@ function showStats() {
   if (benefitsSheet && benefitsSheet.getLastRow() > 1) {
     const bData = benefitsSheet.getRange(2, 1, benefitsSheet.getLastRow() - 1, 10).getValues();
     const now = new Date();
-    const todayStr = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy-MM-dd');
     const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
     const weekAgoStr = Utilities.formatDate(weekAgo, 'Asia/Taipei', 'yyyy-MM-dd');
     const monthStart = Utilities.formatDate(now, 'Asia/Taipei', 'yyyy-MM') + '-01';
 
-    let weekProcessed = 0, weekHours = 0;
-    let monthProcessed = 0, monthHours = 0, monthCost = 0;
-    let cumProcessed = 0, cumHours = 0;
+    // 即時讀取當前設定值，用封數 × 設定值計算省下時間（不用 Sheet 裡寫死的舊值）
+    const currentManualMinutes = parseFloat(_getSettingValue('MANUAL_MINUTES_PER_EMAIL')) || 5.5;
+
+    let weekProcessed = 0, monthProcessed = 0, monthCost = 0;
+    let totalProcessed = 0;
 
     for (let i = 0; i < bData.length; i++) {
       const d = bData[i][0] instanceof Date
         ? Utilities.formatDate(bData[i][0], 'Asia/Taipei', 'yyyy-MM-dd')
         : String(bData[i][0]).trim();
       const rowProcessed = bData[i][1] || 0;
-      const rowHours = bData[i][3] || 0;
       const rowCost = bData[i][6] || 0;
 
-      if (d >= weekAgoStr) {
-        weekProcessed += rowProcessed;
-        weekHours += rowHours;
-      }
+      totalProcessed += rowProcessed;
+      if (d >= weekAgoStr) weekProcessed += rowProcessed;
       if (d >= monthStart) {
         monthProcessed += rowProcessed;
-        monthHours += rowHours;
         monthCost += rowCost;
       }
     }
 
-    // 累計從最後一行讀取
-    const lastBRow = bData[bData.length - 1];
-    cumProcessed = lastBRow[7] || 0;
-    cumHours = lastBRow[8] || 0;
+    const weekHours = weekProcessed * currentManualMinutes / 60;
+    const monthHours = monthProcessed * currentManualMinutes / 60;
+    const cumHours = totalProcessed * currentManualMinutes / 60;
 
-    msg += '\n\n📈 自動化效益\n' +
+    msg += '\n\n📈 自動化效益（基準: ' + currentManualMinutes + ' 分鐘/封）\n' +
       '本週：處理 ' + weekProcessed + ' 封，省下 ' + weekHours.toFixed(1) + ' 小時\n' +
       '本月：處理 ' + monthProcessed + ' 封，省下 ' + monthHours.toFixed(1) + ' 小時\n' +
-      '累計至今：處理 ' + cumProcessed + ' 封，省下 ' + cumHours.toFixed(1) + ' 小時\n' +
+      '累計至今：處理 ' + totalProcessed + ' 封，省下 ' + cumHours.toFixed(1) + ' 小時\n' +
       '本月 API 成本：$' + monthCost.toFixed(2) + ' USD';
   }
 
@@ -5174,6 +5611,9 @@ function doGet(e) {
       case 'runEvaluation':      result = _scheduleAsync('runEvaluation'); break;
       case 'updateCorrectionStats': _updateCorrectionStats(); result = {status: 'success'}; break;
       case 'exportPromptDoc':    exportPromptDoc(); result = {status: 'success'}; break;
+      case 'updateBenefitsStats': _reconcileBenefitsStats(); result = {status: 'success'}; break;
+      case 'reconcileBenefitsStats': _reconcileBenefitsStats(); result = {status: 'success'}; break;
+      case 'retryFailed':        result = _retryFailedEmails(); break;
 
       // === 測試前置操作（Gmail 標籤） ===
       case 'addLabel':    result = _testAddLabel(params); break;
@@ -5189,6 +5629,7 @@ function doGet(e) {
       // === 測試驗證（讀取狀態） ===
       case 'getSheetData':  result = _testGetSheetData(params); break;
       case 'getDriveFiles': result = _testGetDriveFiles(params); break;
+      case 'listAllDriveFiles': result = _testListAllDriveFiles(); break;
       case 'getLastLog':    result = _testGetLastLog(params); break;
 
       // === 清理 ===
@@ -5492,6 +5933,52 @@ function _testGetDriveFiles(params) {
     subfolderCount: subfolders.length,
     subfolders: subfolders
   };
+}
+
+/**
+ * 遞迴列出專利/商標/未分類資料夾下所有檔案（含子資料夾路徑）
+ * 用於 snapshot/restore 測試時比對 Drive 檔案是否重複
+ */
+function _testListAllDriveFiles() {
+  var rootFolder = _getProjectFolder();
+  var topFolders = ['專利', '商標', '未分類'];
+  var result = {};
+  var totalFiles = 0;
+
+  topFolders.forEach(function(name) {
+    var iter = rootFolder.getFoldersByName(name);
+    if (!iter.hasNext()) {
+      result[name] = {subfolders: 0, files: 0, detail: {}};
+      return;
+    }
+    var folder = iter.next();
+    var detail = {};
+    var folderFileCount = 0;
+
+    // 遞迴列出
+    var _listRecursive = function(f, path) {
+      var files = f.getFiles();
+      var fileList = [];
+      while (files.hasNext()) {
+        var file = files.next();
+        fileList.push(file.getName());
+        folderFileCount++;
+        totalFiles++;
+      }
+      if (fileList.length > 0) detail[path || '_root'] = fileList;
+
+      var subs = f.getFolders();
+      while (subs.hasNext()) {
+        var sub = subs.next();
+        _listRecursive(sub, (path ? path + '/' : '') + sub.getName());
+      }
+    };
+
+    _listRecursive(folder, '');
+    result[name] = {subfolders: Object.keys(detail).length, files: folderFileCount, detail: detail};
+  });
+
+  return {totalFiles: totalFiles, folders: result};
 }
 
 function _testGetLastLog(params) {
@@ -5880,6 +6367,69 @@ function _trashAllFilesRecursive(folder) {
   return count;
 }
 
+/**
+ * Drive 快照 helper：遞迴收集專利/商標/未分類資料夾內所有檔案的 {id, name, folderId}
+ * 回傳 [{id, name, folderId}, ...] 陣列
+ */
+function _snapshotDriveFiles() {
+  var folderNames = ['專利', '商標', '未分類'];
+  var rootFolder = _getProjectFolder();
+  var allFiles = [];
+
+  folderNames.forEach(function(name) {
+    var iter = rootFolder.getFoldersByName(name);
+    if (!iter.hasNext()) return;
+    var folder = iter.next();
+
+    var _collectFiles = function(currentFolder) {
+      var files = currentFolder.getFiles();
+      while (files.hasNext()) {
+        var f = files.next();
+        allFiles.push({ id: f.getId(), name: f.getName(), folderId: currentFolder.getId() });
+      }
+      var subs = currentFolder.getFolders();
+      while (subs.hasNext()) {
+        _collectFiles(subs.next());
+      }
+    };
+    _collectFiles(folder);
+  });
+
+  return allFiles;
+}
+
+/**
+ * Gmail 快照 helper：收集所有 AI/* 標籤下的 thread×label 對應
+ * 回傳 {data: {threadId: [labelName, ...], ...}, threadCount: N, warning: string|null}
+ */
+function _snapshotGmailLabels() {
+  var prefix = CONFIG.LABEL_PREFIX + '/';
+  var aiLabels = GmailApp.getUserLabels().filter(function(l) {
+    return l.getName().startsWith(prefix);
+  });
+
+  var threadLabels = {}; // {threadId: [labelName, ...]}
+  var warning = null;
+
+  aiLabels.forEach(function(label) {
+    var threads = label.getThreads(0, 500);
+    if (threads.length >= 490) {
+      warning = 'Label "' + label.getName() + '" has ' + threads.length + ' threads (near 500 limit, some may be missed)';
+    }
+    threads.forEach(function(thread) {
+      var tid = thread.getId();
+      if (!threadLabels[tid]) threadLabels[tid] = [];
+      threadLabels[tid].push(label.getName());
+    });
+  });
+
+  return {
+    data: threadLabels,
+    threadCount: Object.keys(threadLabels).length,
+    warning: warning
+  };
+}
+
 function _testSnapshot() {
   var ss = _getSpreadsheet();
   var props = PropertiesService.getScriptProperties();
@@ -5930,6 +6480,51 @@ function _testSnapshot() {
   } catch(e) {}
   props.setProperty('_snapshot_settings_kv', JSON.stringify(settings));
 
+  // === Drive 快照：記錄所有檔案 {id, name, folderId} ===
+  try {
+    var driveFiles = _snapshotDriveFiles();
+    var driveJson = JSON.stringify(driveFiles);
+    if (driveJson.length > 8000) {
+      var dChunks = [];
+      for (var di = 0; di < driveJson.length; di += 8000) {
+        dChunks.push(driveJson.substring(di, di + 8000));
+      }
+      props.setProperty('_snapshot_driveFiles', JSON.stringify({chunked: true, count: dChunks.length}));
+      dChunks.forEach(function(chunk, idx) {
+        props.setProperty('_snapshot_driveFiles_' + idx, chunk);
+      });
+      log.push('Drive: ' + driveFiles.length + ' files saved (' + dChunks.length + ' chunks)');
+    } else {
+      props.setProperty('_snapshot_driveFiles', driveJson);
+      log.push('Drive: ' + driveFiles.length + ' files saved');
+    }
+  } catch(e) {
+    log.push('Drive snapshot error: ' + e.message);
+  }
+
+  // === Gmail 快照：記錄 thread×label 對應 ===
+  try {
+    var gmailState = _snapshotGmailLabels();
+    var gmailJson = JSON.stringify(gmailState.data);
+    if (gmailJson.length > 8000) {
+      var gChunks = [];
+      for (var gi = 0; gi < gmailJson.length; gi += 8000) {
+        gChunks.push(gmailJson.substring(gi, gi + 8000));
+      }
+      props.setProperty('_snapshot_gmailLabels', JSON.stringify({chunked: true, count: gChunks.length}));
+      gChunks.forEach(function(chunk, idx) {
+        props.setProperty('_snapshot_gmailLabels_' + idx, chunk);
+      });
+      log.push('Gmail: ' + gmailState.threadCount + ' threads × labels saved (' + gChunks.length + ' chunks)');
+    } else {
+      props.setProperty('_snapshot_gmailLabels', gmailJson);
+      log.push('Gmail: ' + gmailState.threadCount + ' threads × labels saved');
+    }
+    if (gmailState.warning) log.push('Gmail WARNING: ' + gmailState.warning);
+  } catch(e) {
+    log.push('Gmail snapshot error: ' + e.message);
+  }
+
   props.setProperty('_snapshot_timestamp', new Date().toISOString());
   log.push('Snapshot saved at ' + new Date().toISOString());
 
@@ -5937,9 +6532,10 @@ function _testSnapshot() {
 }
 
 /**
- * Restore：從 ScriptProperties 還原所有 Sheet tab 到 snapshot 狀態
- * 只動 Row 2+ 的資料，保留 Row 1 標題和所有格式（欄寬、凍結列、隱藏欄、資料驗證等）
- * 搭配 deepClean（清 Drive + Gmail）使用
+ * Restore：完整還原到 snapshot 狀態（Sheet + Drive + Gmail）
+ * - Sheet：只動 Row 2+ 的資料，保留 Row 1 標題和所有格式
+ * - Drive：trash 快照之後新增的檔案（比對 file ID）
+ * - Gmail：全清 AI/* 標籤 → 加回快照時的 thread×label 對應
  */
 function _testRestore() {
   var ss = _getSpreadsheet();
@@ -6000,6 +6596,151 @@ function _testRestore() {
       log.push(tabName + ': re-applied category formatting (merge + colors)');
     }
   });
+
+  // === Drive 還原：trash 快照之後新增的檔案 ===
+  var driveApiCalls = 0;
+  try {
+    var driveSnap = props.getProperty('_snapshot_driveFiles');
+    if (driveSnap) {
+      var dParsed = JSON.parse(driveSnap);
+      var snapshotFileIds;
+      if (dParsed.chunked) {
+        var dJson = '';
+        for (var di = 0; di < dParsed.count; di++) {
+          dJson += props.getProperty('_snapshot_driveFiles_' + di) || '';
+        }
+        snapshotFileIds = JSON.parse(dJson);
+      } else {
+        snapshotFileIds = dParsed;
+      }
+
+      // 建立快照 map: { fileId → {name, folderId} }（向下相容舊格式 [id, id, ...]）
+      var snapshotMap = {};
+      var isNewFormat = snapshotFileIds.length > 0 && typeof snapshotFileIds[0] === 'object';
+      snapshotFileIds.forEach(function(entry) {
+        if (isNewFormat) {
+          snapshotMap[entry.id] = { name: entry.name, folderId: entry.folderId };
+        } else {
+          snapshotMap[entry] = { name: null, folderId: null };  // 舊格式無名稱資訊
+        }
+      });
+
+      // 掃描現在 Drive 的所有檔案
+      var currentFiles = _snapshotDriveFiles();
+      var trashedCount = 0;
+      var renamedCount = 0;
+      var movedCount = 0;
+      currentFiles.forEach(function(cur) {
+        var snap = snapshotMap[cur.id];
+        if (!snap) {
+          // 不在快照 → trash
+          try {
+            DriveApp.getFileById(cur.id).setTrashed(true);
+            trashedCount++;
+            driveApiCalls++;
+          } catch(e) {
+            log.push('Drive: skip file ' + cur.id + ' (' + e.message + ')');
+          }
+        } else if (isNewFormat) {
+          // 在快照 → 檢查名稱和資料夾
+          try {
+            var file = DriveApp.getFileById(cur.id);
+            if (snap.name && cur.name !== snap.name) {
+              file.setName(snap.name);
+              renamedCount++;
+              driveApiCalls++;
+            }
+            if (snap.folderId && cur.folderId !== snap.folderId) {
+              var targetFolder = DriveApp.getFolderById(snap.folderId);
+              file.moveTo(targetFolder);
+              movedCount++;
+              driveApiCalls++;
+            }
+          } catch(e) {
+            log.push('Drive: skip restore ' + cur.id + ' (' + e.message + ')');
+          }
+        }
+      });
+      var driveMsg = 'Drive: trashed ' + trashedCount + ' new files';
+      if (isNewFormat) driveMsg += ', renamed ' + renamedCount + ', moved ' + movedCount;
+      driveMsg += ' (snapshot: ' + snapshotFileIds.length + ' files)';
+      log.push(driveMsg);
+    } else {
+      log.push('Drive: no snapshot data, skipped');
+    }
+  } catch(e) {
+    log.push('Drive restore error: ' + e.message);
+  }
+
+  // === Gmail 還原：全清 AI/* 標籤 → 加回快照中的 thread×label ===
+  var gmailApiCalls = 0;
+  try {
+    var gmailSnap = props.getProperty('_snapshot_gmailLabels');
+    if (gmailSnap) {
+      var gParsed = JSON.parse(gmailSnap);
+      var snapshotGmail;
+      if (gParsed.chunked) {
+        var gJson = '';
+        for (var gi = 0; gi < gParsed.count; gi++) {
+          gJson += props.getProperty('_snapshot_gmailLabels_' + gi) || '';
+        }
+        snapshotGmail = JSON.parse(gJson);
+      } else {
+        snapshotGmail = gParsed;
+      }
+
+      // Step 1: 全清 — 移除所有 AI/* 標籤（重用 factoryReset 邏輯）
+      var aiLabels = GmailApp.getUserLabels().filter(function(l) {
+        return l.getName().startsWith(CONFIG.LABEL_PREFIX + '/');
+      });
+      var removedCount = 0;
+      aiLabels.forEach(function(label) {
+        var threads = label.getThreads(0, 500);
+        if (threads.length > 0) {
+          label.removeFromThreads(threads);
+          removedCount += threads.length;
+          gmailApiCalls++;
+        }
+      });
+      log.push('Gmail: removed AI labels from ' + removedCount + ' thread-label pairs');
+
+      // Step 2: 加回快照中的 thread×label
+      // snapshotGmail 格式: {threadId: ["AI/收發碼/FC", "AI/狀態/待確認"], ...}
+      var addedCount = 0;
+      var threadIds = Object.keys(snapshotGmail);
+      threadIds.forEach(function(threadId) {
+        var labelNames = snapshotGmail[threadId];
+        try {
+          var thread = GmailApp.getThreadById(threadId);
+          if (!thread) {
+            log.push('Gmail: thread ' + threadId + ' not found, skipped');
+            return;
+          }
+          labelNames.forEach(function(labelName) {
+            var label = GmailApp.getUserLabelByName(labelName);
+            if (label) {
+              label.addToThread(thread);
+              addedCount++;
+              gmailApiCalls++;
+            }
+          });
+        } catch(e) {
+          log.push('Gmail: skip thread ' + threadId + ' (' + e.message + ')');
+        }
+      });
+      log.push('Gmail: re-applied ' + addedCount + ' thread-label pairs from snapshot');
+
+      if (gmailApiCalls > 190) {
+        log.push('⚠️ Gmail API calls = ' + gmailApiCalls + ' — approaching 200, consider batch optimization');
+      }
+    } else {
+      log.push('Gmail: no snapshot data, skipped');
+    }
+  } catch(e) {
+    log.push('Gmail restore error: ' + e.message);
+  }
+
+  log.push('API calls — Drive: ' + driveApiCalls + ', Gmail: ' + gmailApiCalls);
 
   return {status: 'restored', steps: log};
 }
