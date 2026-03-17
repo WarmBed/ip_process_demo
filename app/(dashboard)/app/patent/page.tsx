@@ -1001,7 +1001,7 @@ export default function PatentDashboardPage() {
         </div>
 
         {/* 2-column grid */}
-        <div style={{ display: "grid", gridTemplateColumns: "1fr 320px", gap: 16, alignItems: "start" }}>
+        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, alignItems: "start" }}>
 
           {/* ── Left column ── */}
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
@@ -1176,51 +1176,6 @@ export default function PatentDashboardPage() {
               })}
             </div>
 
-            {/* Block 4: 年費 / 續展警示 */}
-            <div style={{ border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
-              <BlockHead
-                icon={<AlertCircle size={12} color="#7c3aed" />}
-                title="年費 / 續展警示"
-                badge={annuity90.length > 0 ? `${annuity90.length} 件` : undefined}
-                badgeColor="#7c3aed"
-                linkHref="/app/deadlines"
-                count={annuityDls.length}
-              />
-              {annuityDls.slice(0, 5).map((d, i, arr) => {
-                const days  = daysUntil(d.due_date);
-                const isSel = selected?.id === d.id;
-                return (
-                  <div key={d.id}
-                    onClick={() => select(d.id, "annuity")}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 8, padding: "9px 14px",
-                      borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none",
-                      background: isSel ? "#eef2ff" : "var(--bg)", cursor: "pointer",
-                      borderLeft: `3px solid ${isSel ? "#6366f1" : days <= 90 ? "#7c3aed" : "transparent"}`,
-                    }}
-                    onMouseEnter={el => { if (!isSel) el.currentTarget.style.background = "var(--sl2)"; }}
-                    onMouseLeave={el => { if (!isSel) el.currentTarget.style.background = "var(--bg)"; }}
-                  >
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 1 }}>
-                        <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 9, color: "var(--fg-muted)" }}>{d.case_number}</span>
-                        <span style={{ fontSize: 9, padding: "1px 4px", borderRadius: 2, color: DEADLINE_BADGE["annuity"].fg, background: DEADLINE_BADGE["annuity"].bg, fontWeight: 600 }}>
-                          {DEADLINE_TYPE_LABELS[d.type]}
-                        </span>
-                      </div>
-                      <div style={{ fontSize: 12, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.description}</div>
-                      <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginTop: 1 }}>{d.client_name} · {d.assignee_name}</div>
-                    </div>
-                    <span style={{ fontSize: 11, fontWeight: 700, color: days <= 90 ? "#7c3aed" : "var(--fg-muted)", flexShrink: 0 }}>
-                      {days}d
-                    </span>
-                  </div>
-                );
-              })}
-              {annuityDls.length === 0 && (
-                <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "var(--fg-subtle)" }}>90 天內無年費到期</div>
-              )}
-            </div>
 
           </div>
         </div>
