@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { MOCK_EMAIL_DETAILS, MOCK_EMAILS } from "@/lib/mock-data";
 import type { ApiResponse } from "@/lib/types";
 
+// In-memory review store (mock)
+const reviewStore: Record<string, { status: string; direction_code: string; reviewer_note: string; reviewed_at: string }> = {};
+
 export async function GET(
   _req: NextRequest,
   { params }: { params: Promise<{ id: string }> }
@@ -23,8 +26,10 @@ export async function GET(
     );
   }
 
+  const review = reviewStore[id];
   return NextResponse.json({
     data: {
+      review: review ?? null,
       email: {
         id: listItem.id,
         tenant_id: "t001",
@@ -64,4 +69,21 @@ export async function GET(
       attachments: [],
     },
   });
+}
+
+export async function PATCH(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  const { id } = await params;
+  const body = await req.json() as { status: string; direction_code: string; reviewer_note: string };
+
+  reviewStore[id] = {
+    status: body.status,
+    direction_code: body.direction_code,
+    reviewer_note: body.reviewer_note,
+    reviewed_at: new Date().toISOString(),
+  };
+
+  return NextResponse.json({ data: { ok: true, ...reviewStore[id] } });
 }

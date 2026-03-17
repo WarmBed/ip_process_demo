@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { use } from "react";
 import Link from "next/link";
+import { Loading } from "@/components/loading";
 import {
   ArrowLeft, Paperclip, ExternalLink, Clock, Hash,
   CheckCircle, AlertCircle, ChevronDown, ChevronUp,
@@ -144,7 +145,7 @@ export default function EmailDetailPage({ params }: { params: Promise<{ id: stri
       .catch(() => setLoading(false));
   }, [id]);
 
-  if (loading) return <div style={{ padding: 40, textAlign: "center", color: "var(--fg-subtle)" }}>載入中...</div>;
+  if (loading) return <Loading pad={60} />;
   if (!detail)  return <div style={{ padding: 40, textAlign: "center", color: "var(--fg-subtle)" }}>找不到此信件</div>;
 
   const { email, classification: cls, attachments } = detail;
@@ -325,7 +326,7 @@ export default function EmailDetailPage({ params }: { params: Promise<{ id: stri
                 onToggle={() => setDriveExpanded(v => !v)}
               >
                 {driveLoading
-                  ? <div style={{ padding: "20px", textAlign: "center", fontSize: 13, color: "var(--fg-subtle)" }}>搜尋中...</div>
+                  ? <Loading pad={16} label="Searching" />
                   : <DriveFilesSection files={driveFiles} currentEmailId={id} />}
               </Section>
             </div>

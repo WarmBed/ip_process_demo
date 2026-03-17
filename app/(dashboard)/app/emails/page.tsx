@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Search, Filter, RefreshCw, Paperclip, ChevronDown } from "lucide-react";
+import { Loading } from "@/components/loading";
 import type { EmailListItem, ClassificationStatus, ApiResponse } from "@/lib/types";
 
 const STATUS_LABELS: Record<string, string> = {
@@ -176,9 +177,7 @@ export default function EmailsPage() {
 
         {/* Rows */}
         {loading ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: "var(--fg-subtle)", fontSize: 13 }}>
-            載入中...
-          </div>
+          <Loading />
         ) : emails.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: "var(--fg-subtle)", fontSize: 13 }}>
             沒有找到符合條件的信件

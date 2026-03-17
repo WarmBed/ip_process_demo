@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import { BookOpen, Cpu, Search } from "lucide-react";
 import type { RuleGroup } from "@/app/api/v1/rules/route";
+import { Loading } from "@/components/loading";
 
 export default function RulesPage() {
   const [groups, setGroups]   = useState<RuleGroup[]>([]);
@@ -91,9 +92,7 @@ export default function RulesPage() {
 
       {/* Rules */}
       {loading ? (
-        <div style={{ padding: 40, textAlign: "center", color: "var(--fg-subtle)", fontSize: 13 }}>
-          載入中…
-        </div>
+        <Loading />
       ) : filteredGroups.length === 0 ? (
         <div style={{ padding: 40, textAlign: "center", color: "var(--fg-subtle)", fontSize: 13 }}>
           沒有符合的規則

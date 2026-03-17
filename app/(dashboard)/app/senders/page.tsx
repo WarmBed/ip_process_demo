@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import type { Sender, ApiResponse } from "@/lib/types";
+import { Loading } from "@/components/loading";
 
 const ROLE_LABELS: Record<string, string> = {
   C: "客戶",
@@ -122,9 +123,7 @@ export default function SendersPage() {
         </div>
 
         {loading ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: "var(--fg-subtle)", fontSize: 13 }}>
-            載入中...
-          </div>
+          <Loading />
         ) : filtered.length === 0 ? (
           <div style={{ padding: "40px 0", textAlign: "center", color: "var(--fg-subtle)", fontSize: 13 }}>
             沒有找到符合條件的 Sender

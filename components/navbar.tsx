@@ -2,17 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Mail, Settings, BarChart2, Users, BookOpen, ChevronDown, Briefcase, LayoutTemplate, CheckSquare } from "lucide-react";
+import { Mail, Settings, BarChart2, Users, BookOpen, ChevronDown, Briefcase, LayoutTemplate, CheckSquare, Loader2 } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/app",          label: "總覽",     icon: BarChart2 },
-  { href: "/app/emails",   label: "信件",     icon: Mail },
-  { href: "/app/todo",     label: "待辦",     icon: CheckSquare },
-  { href: "/app/clients",  label: "客戶",     icon: Briefcase },
-  { href: "/app/senders",  label: "Senders",  icon: Users },
-  { href: "/app/rules",    label: "分類規則", icon: BookOpen },
-  { href: "/app/stats",    label: "統計",     icon: BarChart2 },
-  { href: "/app/canvas",   label: "畫布",     icon: LayoutTemplate },
+  { href: "/app",                  label: "總覽",     icon: BarChart2 },
+  { href: "/app/emails",           label: "信件",     icon: Mail },
+  { href: "/app/todo",             label: "待辦",     icon: CheckSquare },
+  { href: "/app/clients",          label: "客戶",     icon: Briefcase },
+  { href: "/app/senders",          label: "Senders",  icon: Users },
+  { href: "/app/rules",            label: "分類規則", icon: BookOpen },
+  { href: "/app/stats",            label: "統計",     icon: BarChart2 },
+  { href: "/app/canvas",           label: "畫布",     icon: LayoutTemplate },
+  { href: "/app/loading-preview",  label: "Loading",  icon: Loader2 },
 ];
 
 export default function Navbar() {
