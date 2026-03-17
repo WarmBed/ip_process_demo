@@ -34,23 +34,18 @@ const codeColor: Record<string, string> = {
   FG: "#dc2626", TG: "#9ca3af", FX: "#6b7280",
 };
 
-function StatCard({ label, value, sub, icon, accent = false }: {
-  label: string; value: string; sub?: string; icon: React.ReactNode; accent?: boolean;
+function StatCard({ label, value, sub, accent = false, last = false }: {
+  label: string; value: string | React.ReactNode; sub?: string | React.ReactNode; accent?: boolean; last?: boolean;
 }) {
   return (
     <div style={{
-      padding: "16px 20px", border: `1px solid ${accent ? "#fde68a" : "var(--border)"}`,
-      borderRadius: 8, background: accent ? "#fffbeb" : "var(--bg)",
-      display: "flex", flexDirection: "column", gap: 8,
+      flex: 1, padding: "16px 24px",
+      borderRight: last ? "none" : "1px solid var(--border)",
+      background: accent ? "#fffbeb" : "transparent",
     }}>
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 12, color: accent ? "#92400e" : "var(--fg-subtle)", fontWeight: 500 }}>{label}</span>
-        <span style={{ color: accent ? "#d97706" : "var(--fg-muted)" }}>{icon}</span>
-      </div>
-      <div>
-        <div style={{ fontSize: 26, fontWeight: 700, color: accent ? "#92400e" : "var(--fg)", letterSpacing: "-0.03em" }}>{value}</div>
-        {sub && <div style={{ fontSize: 12, color: accent ? "#b45309" : "var(--fg-subtle)", marginTop: 2 }}>{sub}</div>}
-      </div>
+      <div style={{ fontSize: 12, color: accent ? "#92400e" : "var(--fg-subtle)", fontWeight: 500, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 26, fontWeight: 700, color: accent ? "#92400e" : "var(--fg)", letterSpacing: "-0.03em", lineHeight: 1.1 }}>{value}</div>
+      {sub && <div style={{ fontSize: 12, color: accent ? "#b45309" : "var(--fg-subtle)", marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -290,11 +285,16 @@ export default function AppOverviewPage() {
           </div>
 
           {/* Stat cards */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
-            <StatCard label="今日收到" value={`${todayMsgs.length} 封`} sub={`本週共 ${MOCK_STATS.this_week} 封`} icon={<Mail size={15} />} />
-            <StatCard label="AI 已歸類" value={`${classified.length} 封`} sub={`準確率 ${(MOCK_STATS.accuracy_rate * 100).toFixed(1)}%`} icon={<TrendingUp size={15} />} />
-            <StatCard label="待人工確認" value={`${pending.length} 封`} sub={pending.length > 0 ? "需要審核" : "全部完成 ✓"} icon={<AlertCircle size={15} />} accent={pending.length > 0} />
-            <StatCard label="分類準確率" value={`${(MOCK_STATS.accuracy_rate * 100).toFixed(1)}%`} sub="收發碼 100%" icon={<CheckCircle size={15} />} />
+          <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 10, marginBottom: 24, overflow: "hidden", background: "var(--bg)" }}>
+            <StatCard label="今日收到" value={`${todayMsgs.length} 封`} sub={`本週共 ${MOCK_STATS.this_week} 封`} />
+            <StatCard label="AI 已歸類" value={`${classified.length} 封`} sub={`準確率 ${(MOCK_STATS.accuracy_rate * 100).toFixed(1)}%`} />
+            <StatCard
+              label="待人工確認"
+              value={<span style={{ color: pending.length > 0 ? "#d97706" : "#16a34a" }}>{pending.length} 封</span>}
+              sub={pending.length > 0 ? "需要審核" : "全部完成 ✓"}
+              accent={pending.length > 0}
+            />
+            <StatCard label="分類準確率" value={<span style={{ color: "#16a34a" }}>{(MOCK_STATS.accuracy_rate * 100).toFixed(1)}%</span>} sub="收發碼 100%" last />
           </div>
 
           {/* Pending section */}
