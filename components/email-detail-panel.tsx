@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ExternalLink, X, FileText, Clock, ChevronDown, ChevronUp } from "lucide-react";
+import { ExternalLink, X, FileText, Clock, ChevronDown, ChevronUp, Bot } from "lucide-react";
 import { MOCK_EMAIL_DETAILS, MOCK_EMAILS } from "@/lib/mock-data";
 
 // ── Storage provider icon ──────────────────────────────────────
@@ -50,6 +50,19 @@ export const MOCK_RELATED_DOCS = [
 const CODE_COLORS: Record<string, string> = {
   FA: "#2563eb", FC: "#7c3aed", TA: "#059669", TC: "#d97706",
   FG: "#dc2626", TG: "#9ca3af", FX: "#6b7280",
+};
+
+const MOCK_AI_SUMMARIES: Record<string, { text: string; count: number; span: string; action?: string }> = {
+  e001: {
+    count: 4, span: "3 個月",
+    text: "BSKB (John Smith) 已於 **3/17** 提交最終 OA 答辯草稿，含修正後 Claims 1–11 及附件 PDF。本案歷經 USPTO 發出官方 OA → IP Winner 審閱建議 → BSKB 草稿 → 最終版本。",
+    action: "建議行動：3/17 前審閱附件確認，官方截止 **4/15**。",
+  },
+  e002: {
+    count: 3, span: "2 天",
+    text: "USPTO 3/15 發出 OA2，IP Winner 3/16 轉知客戶並評估，3/17 委託代理人草擬答辯草稿。方向碼 **TA（寄出・代理人）**，待確認是否正確。",
+    action: "待確認：TA 與 TC 收發方向相似，請人工審核確認後歸檔。",
+  },
 };
 
 // ── Email detail panel ─────────────────────────────────────────
@@ -133,6 +146,32 @@ export function EmailDetailPanel({ emailId, onClose, onNavigate }: {
         <div style={{ fontSize: 15, fontWeight: 600, color: "var(--fg)", lineHeight: 1.4, letterSpacing: "-0.01em" }}>
           {email.subject}
         </div>
+
+        {/* AI Thread Summary */}
+        {MOCK_AI_SUMMARIES[emailId] && (() => {
+          const s = MOCK_AI_SUMMARIES[emailId];
+          return (
+            <div style={{ border: "1px solid #c7d2fe", borderRadius: 9, overflow: "hidden", background: "#eef2ff" }}>
+              <div style={{ padding: "7px 12px", background: "#e0e7ff", borderBottom: "1px solid #c7d2fe", display: "flex", alignItems: "center", gap: 6 }}>
+                <Bot size={12} color="#4338ca" />
+                <span style={{ fontSize: 11, fontWeight: 700, color: "#3730a3" }}>AI 對話摘要</span>
+                <span style={{ fontSize: 10, color: "#6366f1", marginLeft: 4 }}>
+                  {s.count} 封信 · 跨越 {s.span}
+                </span>
+              </div>
+              <div style={{ padding: "10px 12px" }}>
+                <p style={{ fontSize: 12, color: "#312e81", lineHeight: 1.7, margin: 0 }}
+                  dangerouslySetInnerHTML={{ __html: s.text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }}
+                />
+                {s.action && (
+                  <div style={{ marginTop: 7, padding: "5px 8px", background: "#4338ca15", borderRadius: 5, borderLeft: "2px solid #4338ca", fontSize: 11, color: "#3730a3" }}
+                    dangerouslySetInnerHTML={{ __html: s.action.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }}
+                  />
+                )}
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Metadata */}
         <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "10px 12px", background: "var(--sl2)", borderRadius: 8, border: "1px solid var(--border)" }}>
