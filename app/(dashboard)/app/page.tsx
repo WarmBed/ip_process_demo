@@ -44,7 +44,7 @@ function StatCard({ label, value, sub, accent = false, last = false }: {
       background: accent ? "#fffbeb" : "transparent",
     }}>
       <div style={{ fontSize: 12, color: accent ? "#92400e" : "var(--fg-subtle)", fontWeight: 500, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 26, fontWeight: 700, color: accent ? "#92400e" : "var(--fg)", letterSpacing: "-0.03em", lineHeight: 1.1 }}>{value}</div>
+      <div style={{ fontSize: 20, fontWeight: 700, color: accent ? "#92400e" : "var(--fg)", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: accent ? "#b45309" : "var(--fg-subtle)", marginTop: 4 }}>{sub}</div>}
     </div>
   );
@@ -294,8 +294,43 @@ export default function AppOverviewPage() {
               sub={pending.length > 0 ? "需要審核" : "全部完成 ✓"}
               accent={pending.length > 0}
             />
-            <StatCard label="分類準確率" value={<span style={{ color: "#16a34a" }}>{(MOCK_STATS.accuracy_rate * 100).toFixed(1)}%</span>} sub="收發碼 100%" last />
+            <StatCard label="分類準確率" value={<span style={{ color: "#16a34a" }}>{(MOCK_STATS.accuracy_rate * 100).toFixed(1)}%</span>} sub="本週收發碼 100%" last />
           </div>
+
+          {/* Todo summary bar */}
+          {(() => {
+            const urgentTodos = MOCK_TODOS.filter(t => !doneTodos.has(t.id) && t.status !== "done" && t.priority === "urgent");
+            const totalPending = MOCK_TODOS.filter(t => !doneTodos.has(t.id) && t.status !== "done").length;
+            const nextDeadline = MOCK_TODOS
+              .filter(t => !doneTodos.has(t.id) && t.status !== "done" && t.deadline)
+              .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())[0];
+            const days = nextDeadline ? Math.ceil((new Date(nextDeadline.deadline!).getTime() - Date.now()) / 86400000) : null;
+            return (
+              <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 20, border: "1px solid var(--border)", borderRadius: 8, background: "var(--bg)", overflow: "hidden" }}>
+                <div style={{ padding: "9px 18px", borderRight: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 6 }}>
+                  <CheckSquare size={13} color="var(--fg-subtle)" />
+                  <span style={{ fontSize: 12, color: "var(--fg-subtle)" }}>案件待辦</span>
+                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)", marginLeft: 2 }}>{totalPending} 件</span>
+                </div>
+                {urgentTodos.length > 0 && (
+                  <div style={{ padding: "9px 18px", borderRight: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 5 }}>
+                    <span style={{ fontSize: 13, fontWeight: 700, color: "#dc2626" }}>{urgentTodos.length} 件急</span>
+                  </div>
+                )}
+                {days !== null && (
+                  <div style={{ padding: "9px 18px", borderRight: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 5 }}>
+                    <Clock size={12} color={days <= 7 ? "#dc2626" : "#d97706"} />
+                    <span style={{ fontSize: 12, color: days <= 7 ? "#dc2626" : "#d97706" }}>
+                      最近截止 {days <= 0 ? "已逾期" : `${days} 天後`}
+                    </span>
+                  </div>
+                )}
+                <Link href="/app/todo" style={{ marginLeft: "auto", padding: "9px 16px", fontSize: 12, color: "var(--fg-muted)", textDecoration: "none", display: "flex", alignItems: "center", gap: 3 }}>
+                  查看全部 <ChevronRight size={11} />
+                </Link>
+              </div>
+            );
+          })()}
 
           {/* Pending section */}
           {pending.length > 0 && (
