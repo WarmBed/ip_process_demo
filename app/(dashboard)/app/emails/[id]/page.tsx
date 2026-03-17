@@ -137,9 +137,11 @@ export default function EmailDetailPage({ params }: { params: Promise<{ id: stri
           setDriveLoading(true);
           fetch(`/api/v1/drive/search?case_number=${caseNumbers.join(",")}`)
             .then(r => r.json())
-            .then((dr: ApiResponse<DriveFile[]>) => { setDriveFiles(dr.data); setDriveLoading(false); });
+            .then((dr: ApiResponse<DriveFile[]>) => { setDriveFiles(dr.data ?? []); setDriveLoading(false); })
+            .catch(() => setDriveLoading(false));
         }
-      });
+      })
+      .catch(() => setLoading(false));
   }, [id]);
 
   if (loading) return <div style={{ padding: 40, textAlign: "center", color: "var(--fg-subtle)" }}>載入中...</div>;

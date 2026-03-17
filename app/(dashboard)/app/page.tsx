@@ -63,10 +63,12 @@ export default function AppOverviewPage() {
   useEffect(() => {
     fetch("/api/v1/emails?limit=20")
       .then(r => r.json())
-      .then((d: ApiResponse<EmailListItem[]>) => setEmails(d.data));
+      .then((d: ApiResponse<EmailListItem[]>) => setEmails(d.data ?? []))
+      .catch(() => {});
     fetch("/api/v1/stats")
       .then(r => r.json())
-      .then((d: ApiResponse<typeof MOCK_STATS & { benefits: BenefitsStat[] }>) => setBenefits(d.data.benefits));
+      .then((d: ApiResponse<typeof MOCK_STATS & { benefits: BenefitsStat[] }>) => setBenefits(d.data?.benefits ?? []))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
