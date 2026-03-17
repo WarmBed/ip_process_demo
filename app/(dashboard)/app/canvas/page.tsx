@@ -1,0 +1,921 @@
+"use client";
+
+import { useState, useRef, useCallback, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import {
+  Plus, MessageSquare, ZoomIn, ZoomOut, X, Send, Navigation, Pin,
+  RotateCcw, Maximize2, ChevronDown, ChevronUp, ExternalLink,
+  Paperclip, FileText, Clock,
+} from "lucide-react";
+import { MOCK_EMAILS, MOCK_STATS, MOCK_BENEFITS, MOCK_EMAIL_DETAILS } from "@/lib/mock-data";
+import type { AgentAction } from "@/app/api/v1/agent/chat/route";
+
+// ── Types ──────────────────────────────────────────────────────
+
+type CardType = "emails_pending" | "emails_recent" | "emails_attachment" | "deadlines" | "stats" | "note";
+
+interface BoardCard {
+  id: string; type: CardType; title: string; summary: string;
+  x: number; y: number; width: number; color: string; borderColor: string;
+  tag?: string; tagColor?: string;
+}
+
+interface ChatMsg {
+  id: string; role: "user" | "ai"; content: string; action?: AgentAction;
+}
+
+// ── Default cards ──────────────────────────────────────────────
+
+const INITIAL_CARDS: BoardCard[] = [
+  { id: "pending",   type: "emails_pending",    title: "待確認信件",   tag: "需處理",    tagColor: "#d97706", summary: "3 封待確認 — 需要人工審核",                 x: 0,   y: 0,   width: 284, color: "#fffbeb", borderColor: "#fcd34d" },
+  { id: "recent",    type: "emails_recent",     title: "最新信件",     tag: "今日 3 封", tagColor: "#2563eb", summary: "今天共收到 3 封，最後更新 16:42",           x: 308, y: 0,   width: 300, color: "#eff6ff", borderColor: "#93c5fd" },
+  { id: "attach",    type: "emails_attachment", title: "含附件信件",   tag: "4 封",      tagColor: "#7c3aed", summary: "Google Drive 已同步 · 最新附件 today",     x: 632, y: 0,   width: 268, color: "#f5f3ff", borderColor: "#c4b5fd" },
+  { id: "deadlines", type: "deadlines",         title: "近期行動期限", tag: "⚠ 今天",   tagColor: "#dc2626", summary: "最近期限：3/17 今天 · 3/20 3天後",          x: 0,   y: 460, width: 284, color: "#fef2f2", borderColor: "#fca5a5" },
+  { id: "stats",     type: "stats",             title: "本週統計",     tag: "本週",      tagColor: "#16a34a", summary: "47 封 · 準確率 94.7% · 省 4.3 hr",         x: 308, y: 460, width: 268, color: "#f0fdf4", borderColor: "#86efac" },
+];
+
+const DOT_SIZE = 24;
+
+// ── Main component ─────────────────────────────────────────────
+
+export default function CanvasPage() {
+  const router       = useRouter();
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  const [cards, setCards]         = useState<BoardCard[]>(INITIAL_CARDS);
+  const [expanded, setExpanded]   = useState<Set<string>>(new Set(INITIAL_CARDS.map(c => c.id)));
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [offset, setOffset]       = useState({ x: 40, y: 40 });
+  const [scale, setScale]         = useState(1);
+  const [chatOpen, setChatOpen]   = useState(false);
+  const [panelWidth, setPanelWidth] = useState(400);
+
+  const [msgs, setMsgs]           = useState<ChatMsg[]>([{ id: "init", role: "ai", content: "你好！點擊卡片展開信件，點選任一封可在右側查看詳情。或說「帶我去…」直接跳轉頁面。" }]);
+  const [chatInput, setChatInput] = useState("");
+  const [chatLoading, setChatLoading] = useState(false);
+  const chatBottomRef = useRef<HTMLDivElement>(null);
+
+  const isPanning    = useRef(false);
+  const panStart     = useRef({ mx: 0, my: 0, ox: 0, oy: 0 });
+  const cardDrag     = useRef<{ id: string; cx: number; cy: number; mx: number; my: number } | null>(null);
+  const panelResizing    = useRef(false);
+  const panelResizeStart = useRef({ mx: 0, pw: 400 });
+
+  useEffect(() => { chatBottomRef.current?.scrollIntoView({ behavior: "smooth" }); }, [msgs]);
+
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!panelResizing.current) return;
+      const newW = Math.min(680, Math.max(300, panelResizeStart.current.pw - (e.clientX - panelResizeStart.current.mx)));
+      setPanelWidth(newW);
+    };
+    const onUp = () => {
+      if (!panelResizing.current) return;
+      panelResizing.current = false;
+      document.body.style.cursor = "";
+      document.body.style.userSelect = "";
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup", onUp);
+    return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
+  }, []);
+
+  // ── Pan / zoom ───────────────────────────────────────────────
+
+  const onContainerDown = useCallback((e: React.MouseEvent) => {
+    if ((e.target as HTMLElement).closest("[data-card],[data-ui]")) return;
+    isPanning.current = true;
+    panStart.current  = { mx: e.clientX, my: e.clientY, ox: offset.x, oy: offset.y };
+    document.body.style.cursor = "grabbing";
+  }, [offset]);
+
+  const onMouseMove = useCallback((e: React.MouseEvent) => {
+    if (cardDrag.current) {
+      const { id, cx, cy, mx, my } = cardDrag.current;
+      setCards(prev => prev.map(c => c.id === id ? { ...c, x: cx + (e.clientX - mx) / scale, y: cy + (e.clientY - my) / scale } : c));
+      return;
+    }
+    if (isPanning.current) {
+      setOffset({ x: panStart.current.ox + (e.clientX - panStart.current.mx), y: panStart.current.oy + (e.clientY - panStart.current.my) });
+    }
+  }, [scale]);
+
+  const onMouseUp = useCallback(() => {
+    isPanning.current = false; cardDrag.current = null;
+    document.body.style.cursor = "";
+  }, []);
+
+  const onWheel = useCallback((e: React.WheelEvent) => {
+    e.preventDefault();
+    const rect = containerRef.current!.getBoundingClientRect();
+    const mx = e.clientX - rect.left, my = e.clientY - rect.top;
+    const factor = e.deltaY < 0 ? 1.12 : 0.9;
+    const ns = Math.min(3, Math.max(0.2, scale * factor));
+    setScale(ns);
+    setOffset(prev => ({ x: mx - (mx - prev.x) * (ns / scale), y: my - (my - prev.y) * (ns / scale) }));
+  }, [scale]);
+
+  const onCardDragStart = useCallback((e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    const card = cards.find(c => c.id === id);
+    if (card) cardDrag.current = { id, cx: card.x, cy: card.y, mx: e.clientX, my: e.clientY };
+  }, [cards]);
+
+  const onPanelResizeDown = useCallback((e: React.MouseEvent) => {
+    e.stopPropagation();
+    panelResizing.current = true;
+    panelResizeStart.current = { mx: e.clientX, pw: panelWidth };
+    document.body.style.cursor = "col-resize";
+    document.body.style.userSelect = "none";
+  }, [panelWidth]);
+
+  // ── Card actions ─────────────────────────────────────────────
+
+  const toggleExpand = useCallback((id: string) => {
+    setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
+  }, []);
+
+  const deleteCard = useCallback((id: string) => {
+    setCards(prev => prev.filter(c => c.id !== id));
+    setExpanded(prev => { const n = new Set(prev); n.delete(id); return n; });
+  }, []);
+
+  const addNoteCard = useCallback(() => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    const cx = rect ? (rect.width / 2 - offset.x) / scale : 300;
+    const cy = rect ? (rect.height / 2 - offset.y) / scale : 200;
+    setCards(prev => [...prev, { id: `note-${Date.now()}`, type: "note", title: "筆記", summary: "", x: cx - 130, y: cy - 40, width: 260, color: "#f9f9fb", borderColor: "#e8e8ec" }]);
+  }, [offset, scale]);
+
+  const pinToCanvas = useCallback((msg: ChatMsg) => {
+    const rect = containerRef.current?.getBoundingClientRect();
+    const cx = rect ? (rect.width / 2 - offset.x) / scale + (Math.random() - 0.5) * 320 : 400;
+    const cy = rect ? (rect.height / 2 - offset.y) / scale + (Math.random() - 0.5) * 160 : 250;
+    setCards(prev => [...prev, {
+      id: `ai-${msg.id}`, type: "note",
+      title: "AI 摘要", summary: msg.content.replace(/\*\*(.+?)\*\*/g, "$1").slice(0, 120) + "…",
+      x: cx, y: cy, width: 280, color: "#fffbeb", borderColor: "#fcd34d", tag: "AI", tagColor: "#d97706",
+    }]);
+  }, [offset, scale]);
+
+  const fitAll = useCallback(() => {
+    if (!cards.length || !containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const pad = 48, ns = Math.min(
+      (rect.width - pad * 2) / (Math.max(...cards.map(c => c.x + c.width)) - Math.min(...cards.map(c => c.x))),
+      (rect.height - pad * 2) / (Math.max(...cards.map(c => c.y + 200)) - Math.min(...cards.map(c => c.y))),
+      1.4,
+    );
+    setScale(ns);
+    setOffset({ x: pad - Math.min(...cards.map(c => c.x)) * ns, y: pad - Math.min(...cards.map(c => c.y)) * ns });
+  }, [cards]);
+
+  // ── Chat ─────────────────────────────────────────────────────
+
+  const sendChat = useCallback(async (text?: string) => {
+    const content = (text ?? chatInput).trim();
+    if (!content) return;
+    setMsgs(prev => [...prev, { id: Date.now().toString(), role: "user", content }]);
+    setChatInput(""); setChatLoading(true);
+    try {
+      const res  = await fetch("/api/v1/agent/chat", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ message: content }) });
+      const json = await res.json();
+      setMsgs(prev => [...prev, { id: `${Date.now()}_ai`, role: "ai", content: json.reply, action: json.action }]);
+      if (json.action?.auto) setTimeout(() => router.push(json.action.url), 600);
+    } catch {
+      setMsgs(prev => [...prev, { id: `${Date.now()}_e`, role: "ai", content: "連線錯誤。" }]);
+    } finally { setChatLoading(false); }
+  }, [chatInput, router]);
+
+  // ── Background dots ──────────────────────────────────────────
+
+  const tileSize = DOT_SIZE * scale;
+  const bpx = `${((offset.x % tileSize) + tileSize) % tileSize}px`;
+  const bpy = `${((offset.y % tileSize) + tileSize) % tileSize}px`;
+
+  return (
+    <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
+
+      {/* ── Canvas area ───────────────────────────────────────── */}
+      <div
+        ref={containerRef}
+        style={{
+          flex: 1, position: "relative", overflow: "hidden", cursor: "grab",
+          backgroundImage: "radial-gradient(circle, var(--sl7) 1.3px, transparent 1.3px)",
+          backgroundSize: `${tileSize}px ${tileSize}px`,
+          backgroundPosition: `${bpx} ${bpy}`,
+          backgroundColor: "#f5f5f7",
+        }}
+        onMouseDown={onContainerDown}
+        onMouseMove={onMouseMove}
+        onMouseUp={onMouseUp}
+        onMouseLeave={onMouseUp}
+        onWheel={onWheel}
+      >
+        {/* Canvas transform layer */}
+        <div style={{ position: "absolute", left: 0, top: 0, transformOrigin: "0 0", transform: `translate(${offset.x}px, ${offset.y}px) scale(${scale})` }}>
+          {cards.map(card => (
+            <CardNode
+              key={card.id}
+              card={card}
+              isExpanded={expanded.has(card.id)}
+              isSelected={card.type !== "note" && expanded.has(card.id)}
+              onDragStart={onCardDragStart}
+              onToggle={toggleExpand}
+              onDelete={deleteCard}
+              onSelectEmail={(id) => { setSelectedId(id); }}
+              onNavigate={(url) => router.push(url)}
+            />
+          ))}
+        </div>
+
+        {/* Floating chat */}
+        {chatOpen && (
+          <FloatingChat
+            msgs={msgs} input={chatInput} loading={chatLoading} bottomRef={chatBottomRef}
+            onInput={setChatInput} onSend={sendChat}
+            onClose={() => setChatOpen(false)} onPin={pinToCanvas}
+            onNavigate={(url) => router.push(url)}
+          />
+        )}
+
+        {/* Bottom toolbar */}
+        <div data-ui style={{
+          position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)",
+          display: "flex", alignItems: "center", gap: 2,
+          background: "var(--bg)", border: "1px solid var(--border)",
+          borderRadius: 10, padding: "4px 8px",
+          boxShadow: "0 4px 20px rgba(0,0,0,0.10)", zIndex: 50,
+        }}>
+          <ToolBtn icon={<MessageSquare size={14} />} label="AI 助理" onClick={() => setChatOpen(v => !v)} active={chatOpen} />
+          <Sep />
+          <ToolBtn icon={<Plus size={14} />} label="筆記" onClick={addNoteCard} />
+          <Sep />
+          <ToolBtn icon={<ZoomIn size={13} />} onClick={() => setScale(s => Math.min(3, s * 1.15))} />
+          <span style={{ fontSize: 11, color: "var(--fg-muted)", minWidth: 36, textAlign: "center" }}>{Math.round(scale * 100)}%</span>
+          <ToolBtn icon={<ZoomOut size={13} />} onClick={() => setScale(s => Math.max(0.2, s / 1.15))} />
+          <Sep />
+          <ToolBtn icon={<Maximize2 size={13} />} label="全部" onClick={fitAll} />
+          <ToolBtn icon={<RotateCcw size={13} />} label="重置" onClick={() => { setOffset({ x: 40, y: 40 }); setScale(1); }} />
+        </div>
+
+        {/* Card count */}
+        <div data-ui style={{
+          position: "absolute", top: 12, right: 12, fontSize: 11, color: "var(--fg-subtle)",
+          background: "var(--bg)", border: "1px solid var(--border)",
+          padding: "3px 9px", borderRadius: 6, zIndex: 50,
+        }}>
+          {cards.length} 張卡片{selectedId ? " · 右側查看詳情" : " · 點擊展開"}
+        </div>
+      </div>
+
+      {/* ── Right detail panel ────────────────────────────────── */}
+      <div style={{
+        width: selectedId ? panelWidth : 0,
+        overflow: "hidden",
+        borderLeft: selectedId ? "1px solid var(--border)" : "none",
+        background: "var(--bg)",
+        flexShrink: 0,
+        display: "flex", flexDirection: "column",
+        position: "relative",
+      }}>
+        {selectedId && (
+          <>
+            {/* Resize handle on left edge */}
+            <div
+              onMouseDown={onPanelResizeDown}
+              style={{
+                position: "absolute", left: -3, top: 0, bottom: 0, width: 6,
+                cursor: "col-resize", zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center",
+              }}
+            >
+              <div style={{ width: 2, height: 32, borderRadius: 2, background: "var(--sl7)", opacity: 0.5 }} />
+            </div>
+            <EmailDetailPanel
+              emailId={selectedId}
+              onClose={() => setSelectedId(null)}
+              onNavigate={(url) => router.push(url)}
+            />
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
+
+// ── Storage provider icon ─────────────────────────────────────
+
+function StorageIcon({ provider }: { provider?: string }) {
+  if (provider === "google_drive") return (
+    <svg width="15" height="13" viewBox="0 0 87 78" style={{ flexShrink: 0 }}>
+      <path d="M6.6 66.85l3.85 6.65c.8 1.4 1.95 2.5 3.3 3.3L27.5 53H0c0 1.55.4 3.1 1.2 4.5z" fill="#1967D2"/>
+      <path d="M43.65 25L29.9 1.2C28.55 2 27.4 3.1 26.6 4.5L1.2 48.5A9.06 9.06 0 000 53h27.5z" fill="#34A853"/>
+      <path d="M73.55 76.8c1.35-.8 2.5-1.9 3.3-3.3l1.6-2.75 7.65-13.25c.8-1.4 1.2-2.95 1.2-4.5H59.8l5.85 11.5z" fill="#EA4335"/>
+      <path d="M43.65 25l13.75-23.8c-1.35-.8-2.9-1.2-4.5-1.2H34.4c-1.6 0-3.15.45-4.5 1.2z" fill="#00832D"/>
+      <path d="M59.8 53H27.5L13.75 76.8c1.35.8 2.9 1.2 4.5 1.2h50.8c1.6 0 3.15-.45 4.5-1.2z" fill="#4285F4"/>
+      <path d="M73.4 26.5L60.7 4.5c-.8-1.4-1.95-2.5-3.3-3.3L43.65 25l16.15 27H87.3c0-1.55-.4-3.1-1.2-4.5z" fill="#FBBC04"/>
+    </svg>
+  );
+  if (provider === "dropbox") return (
+    <svg width="15" height="13" viewBox="0 0 528 444" style={{ flexShrink: 0 }}>
+      <path d="M132 0L0 88l132 88 132-88zm264 0L264 88l132 88 132-88zM0 264l132 88 132-88-132-88zm264 0l132 88 132-88-132-88zM132 376l132 68 132-68-132-88z" fill="#0061FF"/>
+    </svg>
+  );
+  if (provider === "onedrive") return (
+    <svg width="15" height="13" viewBox="0 0 48 35" style={{ flexShrink: 0 }}>
+      <path d="M29 13.5C27.7 7.8 22.7 3.5 16.8 3.5 11.5 3.5 7 6.7 5 11.3 2 12 0 14.7 0 18c0 3.9 3.1 7 7 7h21.5c3.6 0 6.5-2.9 6.5-6.5 0-2.8-1.8-5.2-4.5-6-.3-.3-.3-.7-.5-1z" fill="#0078D4"/>
+      <path d="M30.5 10C28.2 10 26.1 11 24.5 12.7c2.8.8 5 2.8 6.1 5.3H38c3.3 0 6 2.7 6 6s-2.7 6-6 6H22l-1 .5H38c4.4 0 8-3.6 8-8 0-4.2-3.2-7.6-7.3-8C37.8 11.8 34.3 10 30.5 10z" fill="#1490DF"/>
+    </svg>
+  );
+  return <FileText size={14} color="var(--fg-muted)" style={{ flexShrink: 0 }} />;
+}
+
+// ── Email detail panel ────────────────────────────────────────
+
+const AI_ACTIONS = [
+  { key: "confirm", label: "✓ 確認分類", color: "#16a34a", bg: "#f0fdf4", border: "#bbf7d0" },
+  { key: "archive", label: "🗃 歸檔",     color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" },
+  { key: "rule",    label: "+ 加入規則",  color: "#7c3aed", bg: "#faf5ff", border: "#e9d5ff" },
+  { key: "manual",  label: "⚑ 人工審核",  color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
+];
+
+const MOCK_RELATED_DOCS = [
+  { name: "BRIT25710PUS1_Original_OA.pdf",  date: "2025-01-15", size: "245 KB", provider: "google_drive" },
+  { name: "Draft_Response_v2.docx",          date: "2025-03-01", size: "88 KB",  provider: "google_drive" },
+  { name: "Claims_Amended_v3.docx",          date: "2025-03-10", size: "42 KB",  provider: "dropbox" },
+  { name: "IPO_Fee_Schedule_2025.pdf",        date: "2025-02-20", size: "120 KB", provider: "onedrive" },
+];
+
+function EmailDetailPanel({ emailId, onClose, onNavigate }: {
+  emailId: string; onClose: () => void; onNavigate: (url: string) => void;
+}) {
+  const detail  = MOCK_EMAIL_DETAILS[emailId];
+  const summary = MOCK_EMAILS.find(e => e.id === emailId);
+  const email   = detail?.email ?? summary as any;
+  const cls     = detail?.classification;
+  const atts    = detail?.attachments ?? [];
+
+  const [bodyExpanded, setBodyExpanded] = useState(false);
+  const [docsOpen, setDocsOpen]         = useState(false);
+  const [activeAction, setActiveAction] = useState<string | null>(null);
+  const [comment, setComment]           = useState("");
+  const [commentSent, setCommentSent]   = useState(false);
+
+  if (!email) return null;
+
+  const fmt = (iso: string) => new Date(iso).toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
+
+  const codeColors: Record<string, string> = {
+    FA: "#2563eb", FC: "#7c3aed", TA: "#059669", TC: "#d97706",
+    FG: "#dc2626", TG: "#9ca3af", FX: "#6b7280",
+  };
+  const code    = cls?.direction_code ?? summary?.direction_code ?? "";
+  const codeClr = codeColors[code] ?? "#6b7280";
+
+  const bodyText = email.body_html
+    ? email.body_html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+    : email.body_text ?? "";
+
+  const recipients = (email.recipients ?? []).filter((r: any) => r.type === "to");
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", width: "100%", minWidth: 0 }}>
+
+      {/* Header */}
+      <div style={{ padding: "11px 14px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--sl2)", flexShrink: 0 }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg-muted)" }}>信件詳情</span>
+        <div style={{ display: "flex", gap: 4 }}>
+          <button onClick={() => onNavigate(`/app/emails/${emailId}`)}
+            style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--fg-muted)", background: "var(--sl3)", border: "1px solid var(--border)", borderRadius: 5, padding: "3px 8px", cursor: "pointer" }}>
+            <ExternalLink size={10} /> 完整頁面
+          </button>
+          <button onClick={onClose} className="btn-ghost" style={{ padding: "3px 5px" }}>
+            <X size={13} />
+          </button>
+        </div>
+      </div>
+
+      {/* Scrollable content */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "14px", display: "flex", flexDirection: "column", gap: 12 }}>
+
+        {/* Badges */}
+        <div style={{ display: "flex", gap: 6, flexWrap: "wrap", alignItems: "center" }}>
+          {code && (
+            <span style={{ fontSize: 12, fontWeight: 700, color: codeClr, background: `${codeClr}18`, padding: "3px 9px", borderRadius: 5, border: `1px solid ${codeClr}30` }}>
+              {code}
+            </span>
+          )}
+          {cls?.case_type && (
+            <span style={{ fontSize: 11, background: "var(--sl3)", color: "var(--fg-muted)", padding: "3px 8px", borderRadius: 5, border: "1px solid var(--border)" }}>
+              {cls.case_type === "patent" ? "專利" : "商標"}
+            </span>
+          )}
+          {cls?.status && (
+            <span className={`badge badge-${cls.status}`} style={{ fontSize: 10 }}>
+              {{ pending: "待確認", confirmed: "已確認", corrected: "已修正", failed: "失敗" }[cls.status]}
+            </span>
+          )}
+          {cls?.confidence && (
+            <span style={{ fontSize: 10, color: "var(--fg-subtle)", marginLeft: "auto" }}>
+              信心 {Math.round(cls.confidence * 100)}%
+            </span>
+          )}
+        </div>
+
+        {/* Subject */}
+        <div style={{ fontSize: 15, fontWeight: 600, color: "var(--fg)", lineHeight: 1.4, letterSpacing: "-0.01em" }}>
+          {email.subject}
+        </div>
+
+        {/* Metadata */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 6, padding: "10px 12px", background: "var(--sl2)", borderRadius: 8, border: "1px solid var(--border)" }}>
+          {[
+            { label: "寄件人", value: `${email.sender_name} <${email.sender_email}>` },
+            { label: "時間",   value: fmt(email.received_at) },
+            ...(recipients.length > 0 ? [{ label: "收件人", value: recipients.map((r: any) => r.name || r.email).join(", ") }] : []),
+          ].map(({ label, value }) => (
+            <div key={label} style={{ display: "flex", gap: 8, fontSize: 12 }}>
+              <span style={{ color: "var(--fg-subtle)", minWidth: 44, flexShrink: 0 }}>{label}</span>
+              <span style={{ color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Case numbers */}
+        {(cls?.case_numbers ?? summary?.case_numbers ?? []).length > 0 && (
+          <div>
+            <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginBottom: 5, fontWeight: 600 }}>案號</div>
+            <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+              {(cls?.case_numbers ?? summary?.case_numbers ?? []).map(cn => (
+                <span key={cn} style={{ fontSize: 11, fontFamily: "monospace", fontWeight: 600, background: "#eff6ff", color: "#2563eb", padding: "2px 8px", borderRadius: 4, border: "1px solid #bfdbfe" }}>
+                  {cn}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Deadline */}
+        {cls?.selected_deadline && (
+          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "8px 10px", background: "#fef2f2", borderRadius: 7, border: "1px solid #fca5a5" }}>
+            <Clock size={13} color="#dc2626" />
+            <div>
+              <div style={{ fontSize: 10, color: "#dc2626", fontWeight: 600 }}>行動期限</div>
+              <div style={{ fontSize: 12, color: "var(--fg)", fontWeight: 500 }}>
+                {new Date(cls.selected_deadline).toLocaleDateString("zh-TW", { month: "long", day: "numeric" })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* AI action suggestions */}
+        <div style={{ padding: "10px 12px", background: "var(--sl2)", borderRadius: 8, border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--fg-subtle)", marginBottom: 7 }}>🤖 AI 建議動作</div>
+          {cls?.status === "pending" && (
+            <div style={{ fontSize: 11, color: "#1d4ed8", marginBottom: 8, padding: "5px 8px", background: "#eff6ff", borderRadius: 5, borderLeft: "2px solid #3b82f6" }}>
+              建議確認為 {code} 分類，可直接歸檔或標記人工審核
+            </div>
+          )}
+          <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+            {AI_ACTIONS.map(a => (
+              <button key={a.key}
+                onClick={() => setActiveAction(activeAction === a.key ? null : a.key)}
+                style={{
+                  fontSize: 11, padding: "4px 10px", borderRadius: 5, cursor: "pointer",
+                  border: `1px solid ${activeAction === a.key ? a.color : a.border}`,
+                  background: activeAction === a.key ? a.color : a.bg,
+                  color: activeAction === a.key ? "white" : a.color,
+                  fontWeight: activeAction === a.key ? 600 : 400, transition: "all 0.12s",
+                }}>
+                {a.label}
+              </button>
+            ))}
+          </div>
+          {activeAction && (
+            <div style={{ marginTop: 8, fontSize: 11, color: "var(--fg-muted)", padding: "5px 8px", background: "var(--sl3)", borderRadius: 5 }}>
+              ✓ 已標記「{AI_ACTIONS.find(a => a.key === activeAction)?.label.replace(/^[^ ]+ /, "")}」，點擊再次確認送出
+            </div>
+          )}
+        </div>
+
+        {/* AI semantic name */}
+        {(cls?.semantic_name ?? summary?.semantic_name) && (
+          <div style={{ padding: "8px 10px", background: "var(--sl2)", borderRadius: 7, border: "1px solid var(--border)" }}>
+            <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginBottom: 3, fontWeight: 600 }}>AI 語義名</div>
+            <div style={{ fontSize: 12, color: "var(--fg)", fontFamily: "monospace" }}>
+              {cls?.semantic_name ?? summary?.semantic_name}
+            </div>
+          </div>
+        )}
+
+        {/* Body (expandable) */}
+        {bodyText && (
+          <div>
+            <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginBottom: 6, fontWeight: 600 }}>信件內容</div>
+            <div style={{
+              fontSize: 12, color: "var(--fg-muted)", lineHeight: 1.7,
+              padding: "10px 12px", background: "var(--sl2)", borderRadius: 7,
+              border: "1px solid var(--border)",
+              maxHeight: bodyExpanded ? 9999 : 180, overflow: "hidden",
+              position: "relative", transition: "max-height 0.2s",
+            }}>
+              {bodyText}
+              {!bodyExpanded && bodyText.length > 300 && (
+                <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, height: 48, background: "linear-gradient(transparent, var(--sl2))" }} />
+              )}
+            </div>
+            {bodyText.length > 300 && (
+              <button onClick={() => setBodyExpanded(!bodyExpanded)}
+                style={{ marginTop: 4, fontSize: 11, color: "var(--fg-muted)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+                {bodyExpanded ? "↑ 收起" : "↓ 顯示完整內容"}
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Related client docs (expandable) */}
+        <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+          <div onClick={() => setDocsOpen(!docsOpen)}
+            style={{ padding: "9px 12px", display: "flex", alignItems: "center", justifyContent: "space-between", cursor: "pointer", background: docsOpen ? "var(--sl3)" : "var(--sl2)" }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+              <FileText size={12} color="var(--fg-muted)" />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg)" }}>相關案件文件</span>
+              <span style={{ fontSize: 10, color: "var(--fg-subtle)", background: "var(--sl4)", padding: "0 5px", borderRadius: 4 }}>{MOCK_RELATED_DOCS.length}</span>
+            </div>
+            {docsOpen ? <ChevronUp size={13} color="var(--fg-muted)" /> : <ChevronDown size={13} color="var(--fg-muted)" />}
+          </div>
+          {docsOpen && MOCK_RELATED_DOCS.map((doc, i) => (
+            <div key={i} style={{ padding: "8px 12px", borderTop: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 8 }}>
+              <StorageIcon provider={doc.provider} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{doc.name}</div>
+                <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginTop: 1 }}>{doc.date} · {doc.size}</div>
+              </div>
+              <ExternalLink size={10} color="var(--fg-subtle)" style={{ flexShrink: 0 }} />
+            </div>
+          ))}
+        </div>
+
+        {/* Attachments */}
+        {atts.length > 0 && (
+          <div>
+            <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginBottom: 6, fontWeight: 600 }}>附件（{atts.length}）</div>
+            <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
+              {atts.map(att => (
+                <a key={att.id} href={att.storage_url} target="_blank" rel="noreferrer"
+                  style={{ display: "flex", alignItems: "center", gap: 8, padding: "8px 10px", background: "var(--sl2)", border: "1px solid var(--border)", borderRadius: 7, textDecoration: "none", transition: "background 0.1s" }}
+                  onMouseEnter={e => (e.currentTarget.style.background = "var(--sl3)")}
+                  onMouseLeave={e => (e.currentTarget.style.background = "var(--sl2)")}>
+                  <StorageIcon provider={att.storage_provider} />
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontSize: 11, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.filename}</div>
+                    <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginTop: 1 }}>
+                      {(att.size_bytes / 1024).toFixed(0)} KB ·{" "}
+                      {{ google_drive: "Google Drive", dropbox: "Dropbox", onedrive: "OneDrive" }[att.storage_provider as string] ?? att.storage_provider}
+                    </div>
+                  </div>
+                  <ExternalLink size={10} color="var(--fg-subtle)" style={{ flexShrink: 0 }} />
+                </a>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Comment / AI learning */}
+        <div style={{ padding: "10px 12px", background: "var(--sl2)", borderRadius: 8, border: "1px solid var(--border)" }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--fg-subtle)", marginBottom: 6 }}>💬 留言給 AI · 協助學習規則</div>
+          {commentSent ? (
+            <div style={{ fontSize: 11, color: "#16a34a", padding: "4px 0" }}>✓ 已送出，AI 將參考此意見更新分類規則</div>
+          ) : (
+            <>
+              <textarea value={comment} onChange={(e) => setComment(e.target.value)}
+                placeholder="補充說明，例如：「這封應歸類為 FC，因為 Questel 是費用代理商」"
+                rows={3}
+                style={{ width: "100%", border: "1px solid var(--border)", borderRadius: 6, padding: "7px 9px", fontSize: 11, lineHeight: 1.6, background: "var(--bg)", color: "var(--fg)", resize: "none", outline: "none", fontFamily: "inherit", boxSizing: "border-box" }}
+              />
+              <button onClick={() => { if (comment.trim()) setCommentSent(true); }} disabled={!comment.trim()}
+                style={{ marginTop: 6, fontSize: 11, padding: "4px 12px", borderRadius: 5, border: "none", background: comment.trim() ? "var(--fg)" : "var(--sl4)", color: comment.trim() ? "var(--bg)" : "var(--fg-subtle)", cursor: comment.trim() ? "pointer" : "default" }}>
+                送出 · AI 將學習
+              </button>
+            </>
+          )}
+        </div>
+
+      </div>
+
+      {/* Footer */}
+      <div style={{ padding: "10px 14px", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
+        <button onClick={() => onNavigate(`/app/emails/${emailId}`)} className="btn-primary"
+          style={{ width: "100%", justifyContent: "center", gap: 6 }}>
+          <ExternalLink size={13} /> 開啟完整信件頁面
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Card node ─────────────────────────────────────────────────
+
+function CardNode({ card, isExpanded, isSelected, onDragStart, onToggle, onDelete, onSelectEmail, onNavigate }: {
+  card: BoardCard; isExpanded: boolean; isSelected: boolean;
+  onDragStart: (e: React.MouseEvent, id: string) => void;
+  onToggle: (id: string) => void;
+  onDelete: (id: string) => void;
+  onSelectEmail: (id: string) => void;
+  onNavigate: (url: string) => void;
+}) {
+  const [hovered, setHovered] = useState(false);
+  return (
+    <div
+      data-card
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
+      style={{
+        position: "absolute", left: card.x, top: card.y, width: card.width,
+        background: card.color,
+        border: `1.5px solid ${hovered || isExpanded ? card.borderColor : "var(--border)"}`,
+        borderRadius: 10, overflow: "hidden",
+        boxShadow: isExpanded ? "0 12px 40px rgba(0,0,0,0.14)" : hovered ? "0 6px 20px rgba(0,0,0,0.10)" : "0 2px 8px rgba(0,0,0,0.06)",
+        transition: "box-shadow 0.15s, border-color 0.15s",
+      }}
+    >
+      {/* Drag handle */}
+      <div
+        onMouseDown={(e) => onDragStart(e, card.id)}
+        style={{
+          padding: "11px 13px 10px", cursor: "grab",
+          borderBottom: isExpanded ? "1px solid var(--border)" : "none",
+          background: isExpanded ? "rgba(255,255,255,0.55)" : "transparent",
+        }}
+      >
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            {card.tag && <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.8, color: card.tagColor ?? "var(--fg-muted)", textTransform: "uppercase", marginBottom: 4 }}>{card.tag}</div>}
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)", lineHeight: 1.3 }}>{card.title}</div>
+            {!isExpanded && card.summary && <div style={{ fontSize: 11, color: "var(--fg-muted)", marginTop: 5, lineHeight: 1.5 }}>{card.summary}</div>}
+          </div>
+          <div style={{ display: "flex", alignItems: "center", gap: 2, marginLeft: 6, flexShrink: 0 }}>
+            {hovered && (
+              <button onMouseDown={(e) => e.stopPropagation()} onClick={() => onDelete(card.id)}
+                style={{ border: "none", background: "transparent", cursor: "pointer", color: "var(--fg-subtle)", padding: 2, borderRadius: 3 }}>
+                <X size={11} />
+              </button>
+            )}
+            {card.type !== "note" && (
+              <button onMouseDown={(e) => e.stopPropagation()} onClick={() => onToggle(card.id)}
+                style={{ border: "none", background: "transparent", cursor: "pointer", color: "var(--fg-muted)", padding: 2, borderRadius: 3 }}>
+                {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
+              </button>
+            )}
+          </div>
+        </div>
+      </div>
+      {isExpanded && (
+        <div onMouseDown={(e) => e.stopPropagation()} style={{ maxHeight: 340, overflowY: "auto" }}>
+          <ExpandedContent card={card} onSelectEmail={onSelectEmail} onNavigate={onNavigate} />
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── Expanded content by type ──────────────────────────────────
+
+function ViewAllBtn({ url, label, onNavigate }: { url: string; label: string; onNavigate: (url: string) => void }) {
+  return (
+    <div style={{ padding: "8px 13px", borderTop: "1px solid var(--border)" }}>
+      <button
+        onClick={(e) => { e.stopPropagation(); onNavigate(url); }}
+        style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--fg-muted)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+      >
+        <ExternalLink size={10} /> {label}
+      </button>
+    </div>
+  );
+}
+
+function ExpandedContent({ card, onSelectEmail, onNavigate }: {
+  card: BoardCard;
+  onSelectEmail: (id: string) => void;
+  onNavigate: (url: string) => void;
+}) {
+  const pending = MOCK_EMAILS.filter(e => e.status === "pending");
+  const recent  = [...MOCK_EMAILS].sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime()).slice(0, 6);
+  const withAtt = MOCK_EMAILS.filter(e => e.has_attachments);
+  const codeColor: Record<string, string> = { FA: "#2563eb", FC: "#7c3aed", TA: "#059669", TC: "#d97706", FG: "#dc2626", TG: "#9ca3af", FX: "#6b7280" };
+  const statusLabel: Record<string, string> = { pending: "待確認", confirmed: "已確認", corrected: "已修正", failed: "失敗" };
+  const fmt = (iso: string) => new Date(iso).toLocaleDateString("zh-TW", { month: "2-digit", day: "2-digit" });
+
+  if (card.type === "emails_pending") return (
+    <div>
+      {pending.length === 0
+        ? <div style={{ padding: "20px 14px", textAlign: "center", fontSize: 12, color: "var(--fg-subtle)" }}>✅ 沒有待確認信件</div>
+        : pending.map((e, i) => <EmailRow key={e.id} e={e} codeColor={codeColor} statusLabel={statusLabel} fmt={fmt} isLast={i === pending.length - 1} onClick={() => onSelectEmail(e.id)} />)
+      }
+      <ViewAllBtn url="/app/emails?status=pending" label="查看全部待確認" onNavigate={onNavigate} />
+    </div>
+  );
+
+  if (card.type === "emails_recent") return (
+    <div>
+      {recent.map((e, i) => <EmailRow key={e.id} e={e} codeColor={codeColor} statusLabel={statusLabel} fmt={fmt} isLast={i === recent.length - 1} onClick={() => onSelectEmail(e.id)} />)}
+      <ViewAllBtn url="/app/emails" label="查看全部信件" onNavigate={onNavigate} />
+    </div>
+  );
+
+  if (card.type === "emails_attachment") return (
+    <div>
+      {withAtt.map((e, i) => (
+        <div key={e.id} onClick={(ev) => { ev.stopPropagation(); onSelectEmail(e.id); }}
+          style={{ padding: "9px 13px", borderBottom: i < withAtt.length - 1 ? "1px solid var(--border)" : "none", cursor: "pointer", transition: "background 0.1s" }}
+          onMouseEnter={el => (el.currentTarget.style.background = "rgba(0,0,0,0.03)")}
+          onMouseLeave={el => (el.currentTarget.style.background = "transparent")}
+        >
+          <div style={{ display: "flex", gap: 7 }}>
+            <Paperclip size={12} color="var(--fg-subtle)" style={{ marginTop: 2, flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: "var(--fg)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.subject}</div>
+              <div style={{ display: "flex", gap: 6, marginTop: 3 }}>
+                <span style={{ fontSize: 10, fontWeight: 700, color: codeColor[e.direction_code ?? ""] ?? "#6b7280", background: "rgba(0,0,0,0.05)", padding: "0 4px", borderRadius: 3 }}>{e.direction_code}</span>
+                <span style={{ fontSize: 10, color: "var(--fg-subtle)" }}>{e.sender_name}</span>
+                <span style={{ fontSize: 10, color: "var(--fg-subtle)", marginLeft: "auto" }}>{fmt(e.received_at)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      ))}
+      <ViewAllBtn url="/app/settings/storage" label="管理儲存空間" onNavigate={onNavigate} />
+    </div>
+  );
+
+  if (card.type === "deadlines") {
+    const items = [
+      { date: "3/17", label: "BRIT25710PUS1 OA 答辯草稿審閱", type: "FA", daysLeft: 0, id: "e001" },
+      { date: "3/20", label: "KOIT20004TUS7 TA 委託答辯草稿", type: "TA", daysLeft: 3, id: "e002" },
+      { date: "4/15", label: "BRIT25710PUS1 USPTO 官方 OA",   type: "官方", daysLeft: 29, id: "e001" },
+      { date: "6/15", label: "KOIT20004TUS7 USPTO OA2 官方",  type: "官方", daysLeft: 90, id: "e002" },
+    ];
+    const uc = (d: number) => d === 0 ? "#dc2626" : d <= 5 ? "#d97706" : "var(--fg-muted)";
+    return (
+      <div>
+        {items.map((d, i) => (
+          <div key={i} onClick={(ev) => { ev.stopPropagation(); onSelectEmail(d.id); }}
+            style={{ padding: "9px 13px", borderBottom: i < items.length - 1 ? "1px solid var(--border)" : "none", cursor: "pointer", transition: "background 0.1s" }}
+            onMouseEnter={el => (el.currentTarget.style.background = "rgba(0,0,0,0.03)")}
+            onMouseLeave={el => (el.currentTarget.style.background = "transparent")}
+          >
+            <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+              <div style={{ minWidth: 32, fontSize: 11, fontWeight: 700, color: uc(d.daysLeft), textAlign: "center" }}>{d.date}</div>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 12, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.label}</div>
+                <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
+                  <span style={{ fontSize: 10, color: "var(--fg-subtle)", background: "rgba(0,0,0,0.05)", padding: "0 4px", borderRadius: 3 }}>{d.type}</span>
+                  <span style={{ fontSize: 10, color: uc(d.daysLeft), fontWeight: d.daysLeft <= 5 ? 600 : 400 }}>{d.daysLeft === 0 ? "今天 ⚠" : `${d.daysLeft} 天後`}</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        ))}
+        <ViewAllBtn url="/app/emails?status=pending" label="查看待確認信件" onNavigate={onNavigate} />
+      </div>
+    );
+  }
+
+  if (card.type === "stats") return (
+    <div style={{ padding: "12px 14px" }}>
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 8, marginBottom: 12 }}>
+        {[
+          { label: "處理封數", value: `${MOCK_STATS.this_week} 封` },
+          { label: "準確率",   value: `${(MOCK_STATS.accuracy_rate * 100).toFixed(1)}%` },
+          { label: "省下工時", value: `${MOCK_STATS.hours_saved.toFixed(1)} hr` },
+          { label: "API 成本", value: `$${MOCK_STATS.api_cost_usd.toFixed(2)}` },
+        ].map(({ label, value }) => (
+          <div key={label} style={{ background: "rgba(0,0,0,0.04)", borderRadius: 7, padding: "8px 10px" }}>
+            <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginBottom: 2 }}>{label}</div>
+            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.02em" }}>{value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginBottom: 6 }}>每日處理封數</div>
+      <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 40 }}>
+        {MOCK_BENEFITS.map(b => {
+          const max = Math.max(...MOCK_BENEFITS.map(x => x.emails_processed));
+          return (
+            <div key={b.date} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
+              <div style={{ width: "100%", height: Math.round((b.emails_processed / max) * 36), background: "#86efac", borderRadius: 2 }} />
+              <span style={{ fontSize: 9, color: "var(--fg-subtle)" }}>{b.date.slice(5)}</span>
+            </div>
+          );
+        })}
+      </div>
+      <button onClick={(e) => { e.stopPropagation(); onNavigate("/app/stats"); }}
+        style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 11, color: "var(--fg-muted)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+        <ExternalLink size={10} /> 查看完整統計
+      </button>
+    </div>
+  );
+
+  return null;
+}
+
+function EmailRow({ e, codeColor, statusLabel, fmt, isLast, onClick }: {
+  e: any; codeColor: Record<string, string>; statusLabel: Record<string, string>;
+  fmt: (s: string) => string; isLast: boolean; onClick: () => void;
+}) {
+  const sc = e.status === "confirmed" ? "#16a34a" : e.status === "failed" ? "#dc2626" : "#d97706";
+  return (
+    <div onClick={(e) => { e.stopPropagation(); onClick(); }}
+      style={{ padding: "9px 13px", borderBottom: isLast ? "none" : "1px solid var(--border)", cursor: "pointer", transition: "background 0.1s" }}
+      onMouseEnter={el => (el.currentTarget.style.background = "rgba(0,0,0,0.03)")}
+      onMouseLeave={el => (el.currentTarget.style.background = "transparent")}
+    >
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
+        <span style={{ fontSize: 10, fontWeight: 700, color: codeColor[e.direction_code ?? ""] ?? "#6b7280", background: "rgba(0,0,0,0.05)", padding: "0 4px", borderRadius: 3, flexShrink: 0 }}>{e.direction_code ?? "?"}</span>
+        <span style={{ fontSize: 12, color: "var(--fg)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{e.subject}</span>
+      </div>
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+        <span style={{ fontSize: 10, color: "var(--fg-subtle)", flex: 1 }}>{e.sender_name}</span>
+        {e.status && <span style={{ fontSize: 9, fontWeight: 600, color: sc, background: "rgba(0,0,0,0.05)", padding: "1px 5px", borderRadius: 3 }}>{statusLabel[e.status] ?? ""}</span>}
+        <span style={{ fontSize: 10, color: "var(--fg-subtle)" }}>{fmt(e.received_at)}</span>
+      </div>
+    </div>
+  );
+}
+
+// ── Floating chat ─────────────────────────────────────────────
+
+function FloatingChat({ msgs, input, loading, bottomRef, onInput, onSend, onClose, onPin, onNavigate }: {
+  msgs: ChatMsg[]; input: string; loading: boolean; bottomRef: React.RefObject<HTMLDivElement>;
+  onInput: (v: string) => void; onSend: (text?: string) => void;
+  onClose: () => void; onPin: (msg: ChatMsg) => void; onNavigate: (url: string) => void;
+}) {
+  return (
+    <div data-ui onMouseDown={(e) => e.stopPropagation()} style={{
+      position: "absolute", left: 16, top: 16,
+      width: 308, height: 480,
+      background: "var(--bg)", border: "1px solid var(--border)",
+      borderRadius: 12, boxShadow: "0 12px 40px rgba(0,0,0,0.13)",
+      zIndex: 100, display: "flex", flexDirection: "column", overflow: "hidden",
+    }}>
+      <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--sl2)", flexShrink: 0 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ width: 20, height: 20, borderRadius: 5, background: "var(--fg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <MessageSquare size={11} color="var(--bg)" />
+          </div>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>AI 助理</span>
+          <span style={{ fontSize: 10, color: "var(--fg-subtle)", background: "var(--sl4)", padding: "1px 6px", borderRadius: 4 }}>畫布</span>
+        </div>
+        <button className="btn-ghost" onClick={onClose} style={{ padding: "2px 4px" }}><X size={13} /></button>
+      </div>
+      <div style={{ flex: 1, overflowY: "auto", padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+        {msgs.map(msg => (
+          <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}>
+            <div className={msg.role === "user" ? "agent-msg-user" : "agent-msg-ai"} style={{ whiteSpace: "pre-wrap", fontSize: 12 }}
+              dangerouslySetInnerHTML={{ __html: msg.role === "ai"
+                ? msg.content.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/\*\*(.+?)\*\*/g,"<strong>$1</strong>").replace(/`(.+?)`/g,"<code style='background:rgba(0,0,0,0.07);padding:1px 3px;border-radius:3px;font-size:10px'>$1</code>")
+                : msg.content }}
+            />
+            {msg.role === "ai" && (
+              <div style={{ display: "flex", gap: 4, marginTop: 5, flexWrap: "wrap" }}>
+                <button onClick={() => onPin(msg)} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, padding: "2px 8px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--sl3)", color: "var(--fg-muted)", cursor: "pointer" }}>
+                  <Pin size={9} /> 固定到畫布
+                </button>
+                {msg.action && (
+                  <button onClick={() => onNavigate(msg.action!.url)} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, padding: "2px 8px", borderRadius: 4, border: "none", background: "var(--fg)", color: "var(--bg)", cursor: "pointer" }}>
+                    <Navigation size={9} /> {msg.action.label}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        ))}
+        {loading && <div className="agent-msg-ai" style={{ color: "var(--fg-subtle)", fontSize: 12 }}><span style={{ letterSpacing: 2 }}>●●●</span></div>}
+        <div ref={bottomRef} />
+      </div>
+      <div style={{ padding: "8px 10px", borderTop: "1px solid var(--border)", display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+        <input value={input} onChange={(e) => onInput(e.target.value)}
+          onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onSend(); } }}
+          placeholder="問問 AI，或說「帶我去…」"
+          style={{ flex: 1, border: "1px solid var(--border)", borderRadius: 6, padding: "6px 9px", fontSize: 12, outline: "none", background: "var(--bg)", color: "var(--fg)" }}
+        />
+        <button className="btn-primary" onClick={() => onSend()} disabled={loading || !input.trim()}
+          style={{ height: 30, width: 30, padding: 0, justifyContent: "center", flexShrink: 0 }}>
+          <Send size={11} />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Helpers ───────────────────────────────────────────────────
+
+function Sep() { return <div style={{ width: 1, height: 18, background: "var(--border)", margin: "0 3px" }} />; }
+
+function ToolBtn({ icon, label, onClick, active }: { icon: React.ReactNode; label?: string; onClick: () => void; active?: boolean; }) {
+  return (
+    <button data-ui className={`btn-ghost${active ? " active" : ""}`} onClick={onClick} style={{ padding: label ? "4px 8px" : "4px 6px", gap: 4 }}>
+      {icon}
+      {label && <span style={{ fontSize: 12 }}>{label}</span>}
+    </button>
+  );
+}
