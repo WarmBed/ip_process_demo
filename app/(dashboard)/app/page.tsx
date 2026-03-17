@@ -325,9 +325,6 @@ export default function AppOverviewPage() {
                     </span>
                   </div>
                 )}
-                <Link href="/app/todo" style={{ marginLeft: "auto", padding: "9px 16px", fontSize: 12, color: "var(--fg-muted)", textDecoration: "none", display: "flex", alignItems: "center", gap: 3 }}>
-                  查看全部 <ChevronRight size={11} />
-                </Link>
               </div>
             );
           })()}
