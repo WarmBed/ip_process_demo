@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { Mail, TrendingUp, AlertCircle, CheckCircle, ChevronRight, HelpCircle, Sparkles } from "lucide-react";
 import type { ApiResponse, EmailListItem, BenefitsStat } from "@/lib/types";
 import { MOCK_STATS } from "@/lib/mock-data";
@@ -117,9 +118,9 @@ export default function AppOverviewPage() {
             <Link href="/app/setup" style={{
               display: "inline-flex", alignItems: "center", gap: 6,
               padding: "8px 16px", borderRadius: 8, textDecoration: "none",
-              background: "linear-gradient(135deg, #f97316 0%, #fb923c 100%)",
-              color: "#fff", fontSize: 12, fontWeight: 600,
-              boxShadow: "0 2px 8px rgba(249,115,22,0.35)",
+              background: "var(--fg)",
+              color: "var(--bg)", fontSize: 12, fontWeight: 600,
+              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
             }}>
               <Sparkles size={13} />
               新手設定精靈
