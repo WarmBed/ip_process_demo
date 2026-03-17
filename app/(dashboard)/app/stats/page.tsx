@@ -12,7 +12,8 @@ export default function StatsPage() {
       .then((r) => r.json())
       .then((d: ApiResponse<typeof MOCK_STATS & { benefits: BenefitsStat[] }>) =>
         setBenefits(d.data.benefits)
-      );
+      )
+      .catch(() => {});
   }, []);
 
   const maxEmails = Math.max(...benefits.map((b) => b.emails_processed), 1);
@@ -23,22 +24,23 @@ export default function StatsPage() {
         效益統計
       </h1>
       <p style={{ fontSize: 13, color: "var(--fg-subtle)", margin: "0 0 24px" }}>
-        累計處理 {MOCK_STATS.total_processed} 封 · 省下 {MOCK_STATS.hours_saved.toFixed(1)} 小時 · API 成本 ${MOCK_STATS.api_cost_usd.toFixed(2)} USD
+        累計處理 {MOCK_STATS.total_processed} 封 · 準確率 {(MOCK_STATS.accuracy_rate * 100).toFixed(1)}%
       </p>
 
       {/* Summary cards */}
-      <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 28 }}>
+      <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 10, marginBottom: 28, overflow: "hidden", background: "var(--bg)" }}>
         {[
           { label: "累計處理信件", value: String(MOCK_STATS.total_processed), unit: "封" },
-          { label: "累計省下工時", value: MOCK_STATS.hours_saved.toFixed(1), unit: "hr" },
-          { label: "累計 API 成本", value: `$${MOCK_STATS.api_cost_usd.toFixed(2)}`, unit: "USD" },
-        ].map((c) => (
+          { label: "本週處理",     value: String(MOCK_STATS.this_week),        unit: "封" },
+          { label: "分類準確率",   value: `${(MOCK_STATS.accuracy_rate * 100).toFixed(1)}%`, unit: "" },
+        ].map((c, i, arr) => (
           <div key={c.label} style={{
-            padding: "18px 20px", border: "1px solid var(--border)", borderRadius: 8,
+            flex: 1, padding: "16px 24px",
+            borderRight: i < arr.length - 1 ? "1px solid var(--border)" : "none",
           }}>
-            <div style={{ fontSize: 12, color: "var(--fg-subtle)", marginBottom: 8 }}>{c.label}</div>
-            <div style={{ fontSize: 26, fontWeight: 600, color: "var(--fg)", letterSpacing: "-0.03em" }}>
-              {c.value} <span style={{ fontSize: 13, fontWeight: 400, color: "var(--fg-muted)" }}>{c.unit}</span>
+            <div style={{ fontSize: 12, color: "var(--fg-subtle)", fontWeight: 500, marginBottom: 6 }}>{c.label}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.02em" }}>
+              {c.value}{c.unit && <span style={{ fontSize: 13, fontWeight: 400, color: "var(--fg-muted)", marginLeft: 3 }}>{c.unit}</span>}
             </div>
           </div>
         ))}
@@ -54,7 +56,7 @@ export default function StatsPage() {
         </div>
         {benefits.map((b, i) => (
           <div key={b.date} style={{
-            display: "grid", gridTemplateColumns: "70px 1fr 50px 80px 90px",
+            display: "grid", gridTemplateColumns: "70px 1fr 60px",
             alignItems: "center", gap: 14, padding: "10px 16px",
             borderBottom: i < benefits.length - 1 ? "1px solid var(--border)" : "none",
           }}>
@@ -66,8 +68,6 @@ export default function StatsPage() {
               }} />
             </div>
             <span style={{ fontSize: 12, color: "var(--fg)", textAlign: "right" }}>{b.emails_processed} 封</span>
-            <span style={{ fontSize: 12, color: "var(--fg-muted)", textAlign: "right" }}>{b.hours_saved.toFixed(1)} hr</span>
-            <span style={{ fontSize: 12, color: "var(--fg-subtle)", textAlign: "right" }}>${b.api_cost_usd.toFixed(3)}</span>
           </div>
         ))}
       </div>
