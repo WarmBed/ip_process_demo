@@ -949,14 +949,21 @@ export default function PatentDashboardPage() {
     .filter(d => d.status !== "completed" && d.type === "annuity")
     .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
 
-  const urgent7    = pendingDls.filter(d => daysUntil(d.due_date) <= 7);
-  const urgent30   = pendingDls.filter(d => daysUntil(d.due_date) <= 30);
+  const pendingTodos  = MOCK_TODOS.filter(t => t.status !== "done");
+  const urgentTodos   = pendingTodos.filter(t => t.priority === "urgent");
+
+  const urgent7 = [
+    ...pendingDls.filter(d => daysUntil(d.due_date) <= 7),
+    ...pendingTodos.filter(t => t.deadline && daysUntil(t.deadline) <= 7),
+  ];
+  const urgent30 = [
+    ...pendingDls.filter(d => daysUntil(d.due_date) <= 30),
+    ...pendingTodos.filter(t => t.deadline && daysUntil(t.deadline) <= 30),
+  ];
   const oaCases    = MOCK_CASES.filter(c => c.status === "oa_issued");
   const active     = MOCK_CASES.filter(c => !["granted", "abandoned", "rejected"].includes(c.status));
   const todayIn    = MOCK_INCOMING.filter(m => m.received_at.startsWith(today));
   const annuity90  = annuityDls.filter(d => daysUntil(d.due_date) <= 90);
-  const pendingTodos  = MOCK_TODOS.filter(t => t.status !== "done");
-  const urgentTodos   = pendingTodos.filter(t => t.priority === "urgent");
   const needsReview   = MOCK_INCOMING.filter(m => m.needs_review);
 
   return (
