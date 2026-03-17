@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Mail, TrendingUp, AlertCircle, CheckCircle, ChevronRight, HelpCircle,
+  Mail, AlertCircle, CheckCircle, ChevronRight, HelpCircle,
   Clock, CheckSquare, X, Bot, CheckCircle2, Circle, ExternalLink, User, Scale, ArrowRight,
 } from "lucide-react";
 import type { ApiResponse, EmailListItem } from "@/lib/types";
@@ -12,6 +12,7 @@ import { MOCK_STATS } from "@/lib/mock-data";
 import { MOCK_TODOS, DIRECTION_CONFIG } from "@/lib/mock-todo";
 import type { TodoItem } from "@/lib/mock-todo";
 import { EmailDetailPanel } from "@/components/email-detail-panel";
+import { MOCK_CASES, MOCK_DEADLINES } from "@/lib/mock-cases";
 
 const PENDING_REASONS: Record<string, { reason: string; detail: string; tag: string; tagColor: string }> = {
   e002: {
@@ -257,6 +258,14 @@ export default function AppOverviewPage() {
   const pending     = emails.filter(e => e.status === "pending");
   const recentEmails = [...emails].sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime()).slice(0, 5);
 
+  // Case stats
+  const activeCases  = MOCK_CASES.filter(c => !["granted","abandoned","rejected"].includes(c.status)).length;
+  const oaCases      = MOCK_CASES.filter(c => c.status === "oa_issued").length;
+  const urgentDls    = MOCK_DEADLINES.filter(d => {
+    const days = Math.ceil((new Date(d.due_date).getTime() - Date.now()) / 86400000);
+    return d.status !== "completed" && days <= 30;
+  }).sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+
   return (
     <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
 
@@ -264,26 +273,63 @@ export default function AppOverviewPage() {
       <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
         <div style={{ maxWidth: 900 }}>
 
-          {/* Header */}
-          <div style={{ marginBottom: 22 }}>
-            <h1 style={{ fontSize: 18, fontWeight: 600, color: "var(--fg)", margin: 0, letterSpacing: "-0.02em" }}>總覽</h1>
-            <p style={{ fontSize: 13, color: "var(--fg-subtle)", margin: "3px 0 0" }}>
-              IP Winner · 今日 {new Date().toLocaleDateString("zh-TW", { month: "long", day: "numeric" })}
-            </p>
-          </div>
-
           {/* Stat cards */}
           <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 10, marginBottom: 24, overflow: "hidden", background: "var(--bg)" }}>
-            <StatCard label="今日收到" value={`${todayMsgs.length} 封`} sub={`本週共 ${MOCK_STATS.this_week} 封`} />
-            <StatCard label="AI 已歸類" value={`${classified.length} 封`} sub={`準確率 ${(MOCK_STATS.accuracy_rate * 100).toFixed(1)}%`} />
+            <StatCard label="進行中案件" value={<span style={{ color: "#1d4ed8" }}>{activeCases} 件</span>} sub={`共 ${MOCK_CASES.length} 件`} />
             <StatCard
-              label="待人工確認"
-              value={<span style={{ color: pending.length > 0 ? "#d97706" : "#16a34a" }}>{pending.length} 封</span>}
-              sub={pending.length > 0 ? "需要審核" : "全部完成 ✓"}
-              accent={pending.length > 0}
+              label="OA 待答辯"
+              value={<span style={{ color: oaCases > 0 ? "#d97706" : "#16a34a" }}>{oaCases} 件</span>}
+              sub={oaCases > 0 ? "需提交答辯" : "無待辦答辯"}
+              accent={oaCases > 0}
             />
-            <StatCard label="分類準確率" value={<span style={{ color: "#16a34a" }}>{(MOCK_STATS.accuracy_rate * 100).toFixed(1)}%</span>} sub="本週收發碼 100%" last />
+            <StatCard
+              label="30 天內期限"
+              value={<span style={{ color: urgentDls.length > 0 ? "#dc2626" : "#16a34a" }}>{urgentDls.length} 個</span>}
+              sub={urgentDls.length > 0 ? "請注意截止日" : "無緊急期限"}
+              accent={urgentDls.length > 0}
+            />
+            <StatCard label="今日信件" value={`${todayMsgs.length} 封`} sub={pending.length > 0 ? `${pending.length} 封待確認` : "全部已歸類 ✓"} last />
           </div>
+
+          {/* Upcoming deadlines strip */}
+          {urgentDls.length > 0 && (
+            <div style={{ marginBottom: 20, border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", background: "var(--bg)" }}>
+              <div style={{ padding: "9px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--sl2)" }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                  <Clock size={12} color="var(--fg-muted)" />
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg)" }}>近期截止期限</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, color: urgentDls.some(d => Math.ceil((new Date(d.due_date).getTime()-Date.now())/86400000) <= 7) ? "#dc2626" : "#d97706", background: urgentDls.some(d => Math.ceil((new Date(d.due_date).getTime()-Date.now())/86400000) <= 7) ? "#fef2f2" : "#fffbeb", padding: "0 5px", borderRadius: 8, border: `1px solid ${urgentDls.some(d => Math.ceil((new Date(d.due_date).getTime()-Date.now())/86400000) <= 7) ? "#fecaca" : "#fde68a"}` }}>
+                    {urgentDls.length}
+                  </span>
+                </div>
+                <Link href="/app/deadlines" style={{ fontSize: 12, color: "var(--fg-muted)", textDecoration: "none", display: "flex", alignItems: "center", gap: 2 }}>
+                  全部 <ChevronRight size={11} />
+                </Link>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column" }}>
+                {urgentDls.slice(0, 4).map((d, i, arr) => {
+                  const days = Math.ceil((new Date(d.due_date).getTime() - Date.now()) / 86400000);
+                  const isRed = days <= 7;
+                  return (
+                    <div key={d.id} style={{
+                      display: "flex", alignItems: "center", gap: 12,
+                      padding: "9px 16px",
+                      borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none",
+                      borderLeft: `3px solid ${isRed ? "#dc2626" : "#d97706"}`,
+                      background: isRed ? "#fef2f2" : "transparent",
+                    }}>
+                      <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, fontWeight: 600, color: "var(--fg)", minWidth: 140, flexShrink: 0 }}>{d.case_number}</span>
+                      <span style={{ fontSize: 12, color: "var(--fg)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.description}</span>
+                      <span style={{ fontSize: 11, color: "var(--fg-subtle)", flexShrink: 0 }}>{d.client_name}</span>
+                      <span style={{ fontSize: 11, fontWeight: 600, color: isRed ? "#dc2626" : "#d97706", flexShrink: 0, minWidth: 56, textAlign: "right" }}>
+                        {days <= 0 ? `逾期${Math.abs(days)}d` : `${days} 天`}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
 
           {/* Todo summary bar */}
           {(() => {

@@ -35,20 +35,8 @@ export default function RulesPage() {
     }))
     .filter((g) => g.rules.length > 0);
 
-  const totalRules    = groups.reduce((s, g) => s + g.rules.length, 0);
-  const learnedCount  = groups.reduce((s, g) => s + g.rules.filter((r) => r.source === "learned").length, 0);
-
   return (
     <div style={{ padding: "24px 28px", maxWidth: 1000 }}>
-      {/* Header */}
-      <div style={{ marginBottom: 20 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 600, color: "var(--fg)", margin: "0 0 4px", letterSpacing: "-0.02em" }}>
-          分類規則
-        </h1>
-        <p style={{ fontSize: 13, color: "var(--fg-subtle)", margin: 0 }}>
-          LLM 分類邏輯與學習規則 — 共 {totalRules} 條（{learnedCount} 條來自回饋學習）
-        </p>
-      </div>
 
       {/* Toolbar */}
       <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>

@@ -16,9 +16,6 @@ export default function SettingsPage() {
 
   return (
     <div style={{ padding: "24px 28px", maxWidth: 800 }}>
-      <h1 style={{ fontSize: 18, fontWeight: 600, color: "var(--fg)", margin: "0 0 20px", letterSpacing: "-0.02em" }}>
-        設定
-      </h1>
 
       {/* Tab bar */}
       <div style={{

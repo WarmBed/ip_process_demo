@@ -129,24 +129,16 @@ export default function TodoPage() {
       <div style={{ flex: 1, overflowY: "auto", padding: "20px 28px" }}>
         <div style={{ maxWidth: 860 }}>
 
-          {/* Header */}
-          <div style={{ marginBottom: 20 }}>
-            <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 6 }}>
-              <h1 style={{ fontSize: 18, fontWeight: 700, color: "var(--fg)", margin: 0, letterSpacing: "-0.02em" }}>
-                案件待辦
-              </h1>
-              {urgentCount > 0 && (
-                <span style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", background: "#fef2f2", padding: "2px 8px", borderRadius: 10, border: "1px solid #fecaca" }}>
-                  {urgentCount} 件急
-                </span>
-              )}
-              <span style={{ fontSize: 12, color: "var(--fg-subtle)", marginLeft: "auto", display: "flex", alignItems: "center", gap: 5 }}>
-                <Bot size={13} color="#6366f1" />AI 從信件自動抽取下一步
+          {/* Header badges */}
+          <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
+            {urgentCount > 0 && (
+              <span style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", background: "#fef2f2", padding: "2px 8px", borderRadius: 10, border: "1px solid #fecaca" }}>
+                {urgentCount} 件急
               </span>
-            </div>
-            <p style={{ fontSize: 13, color: "var(--fg-muted)", margin: 0, lineHeight: 1.6 }}>
-              每封收到或寄出的信件，AI 會自動分析「下一步誰要做什麼」，整合成這份案件待辦清單。
-            </p>
+            )}
+            <span style={{ fontSize: 12, color: "var(--fg-subtle)", display: "flex", alignItems: "center", gap: 5 }}>
+              <Bot size={13} color="#6366f1" />AI 從信件自動抽取下一步
+            </span>
           </div>
 
           {/* Status tabs */}

@@ -86,28 +86,16 @@ export default function EmailsPage() {
   return (
     <div style={{ padding: "24px 28px", maxWidth: 1100 }}>
 
-      {/* Page header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 18, fontWeight: 600, color: "var(--fg)", margin: 0, letterSpacing: "-0.02em" }}>
-            信件
-          </h1>
-          <p style={{ fontSize: 13, color: "var(--fg-subtle)", margin: "3px 0 0" }}>
-            共 {total} 封 · 自動分類與歸檔
-          </p>
-        </div>
-        <button className="btn-outline" onClick={fetchEmails} style={{ gap: 6 }}>
-          <RefreshCw size={13} />
-          重新整理
-        </button>
-      </div>
-
       {/* Toolbar */}
       <div style={{
         display: "flex", gap: 10, marginBottom: 16,
         padding: "10px 14px", border: "1px solid var(--border)",
         borderRadius: 8, background: "var(--sl2)", alignItems: "center",
       }}>
+        <button className="btn-outline" onClick={fetchEmails} style={{ gap: 6, flexShrink: 0 }}>
+          <RefreshCw size={13} />
+          重新整理
+        </button>
         {/* Search */}
         <form onSubmit={handleSearch} style={{ flex: 1, display: "flex", gap: 6 }}>
           <div style={{

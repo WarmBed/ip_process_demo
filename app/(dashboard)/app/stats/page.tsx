@@ -20,12 +20,6 @@ export default function StatsPage() {
 
   return (
     <div style={{ padding: "24px 28px", maxWidth: 900 }}>
-      <h1 style={{ fontSize: 18, fontWeight: 600, color: "var(--fg)", margin: "0 0 4px", letterSpacing: "-0.02em" }}>
-        效益統計
-      </h1>
-      <p style={{ fontSize: 13, color: "var(--fg-subtle)", margin: "0 0 24px" }}>
-        累計處理 {MOCK_STATS.total_processed} 封 · 準確率 {(MOCK_STATS.accuracy_rate * 100).toFixed(1)}%
-      </p>
 
       {/* Summary cards */}
       <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 10, marginBottom: 28, overflow: "hidden", background: "var(--bg)" }}>

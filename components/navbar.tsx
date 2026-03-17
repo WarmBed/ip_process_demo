@@ -2,18 +2,18 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Mail, Settings, BarChart2, Users, BookOpen, ChevronDown, Briefcase, LayoutTemplate, CheckSquare, Loader2, Sparkles } from "lucide-react";
+import { Mail, Settings, ChevronDown } from "lucide-react";
 
 const NAV_ITEMS = [
-  { href: "/app",                  label: "總覽",     icon: BarChart2 },
-  { href: "/app/emails",           label: "信件",     icon: Mail },
-  { href: "/app/todo",             label: "待辦",     icon: CheckSquare },
-  { href: "/app/clients",          label: "客戶",     icon: Briefcase },
-  { href: "/app/senders",          label: "Senders",  icon: Users },
-  { href: "/app/rules",            label: "分類規則", icon: BookOpen },
-  { href: "/app/stats",            label: "統計",     icon: BarChart2 },
-  { href: "/app/canvas",           label: "畫布",     icon: LayoutTemplate },
-  { href: "/app/loading-preview",  label: "Loading",  icon: Loader2 },
+  { href: "/app",           label: "總覽" },
+  { href: "/app/cases",     label: "案件" },
+  { href: "/app/deadlines", label: "期限" },
+  { href: "/app/emails",    label: "信件" },
+  { href: "/app/todo",      label: "待辦" },
+  { href: "/app/clients",   label: "客戶" },
+  { href: "/app/staff",     label: "人員" },
+  { href: "/app/reports",   label: "月報" },
+  { href: "/app/stats",     label: "統計" },
 ];
 
 export default function Navbar() {
@@ -42,12 +42,12 @@ export default function Navbar() {
           <Mail size={14} color="var(--bg)" />
         </div>
         <span style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)", letterSpacing: "-0.02em" }}>
-          MailFlow
+          IP Winner
         </span>
       </Link>
 
       {/* Nav items */}
-      <nav style={{ display: "flex", alignItems: "center", gap: 2, flex: 1 }}>
+      <nav style={{ display: "flex", alignItems: "center", gap: 2, flex: 1, overflowX: "auto" }}>
         {NAV_ITEMS.map(({ href, label }) => {
           const isActive = href === "/app"
             ? pathname === "/app"
@@ -64,16 +64,8 @@ export default function Navbar() {
         </Link>
       </nav>
 
-      {/* Right: setup + tenant + user */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-        <Link href="/app/setup" style={{
-          display: "inline-flex", alignItems: "center", gap: 5,
-          padding: "5px 12px", borderRadius: 6, textDecoration: "none",
-          border: "1px solid var(--border)", background: "var(--sl2)",
-          fontSize: 12, fontWeight: 500, color: "var(--fg-muted)",
-        }}>
-          <Sparkles size={12} />新手設定
-        </Link>
+      {/* Right: tenant + user */}
+      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         {/* Tenant badge */}
         <div style={{
           display: "flex", alignItems: "center", gap: 6,

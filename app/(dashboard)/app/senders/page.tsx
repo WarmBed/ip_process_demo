@@ -67,16 +67,8 @@ export default function SendersPage() {
   return (
     <div style={{ padding: "24px 28px", maxWidth: 900 }}>
 
-      {/* Header */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <div>
-          <h1 style={{ fontSize: 18, fontWeight: 600, color: "var(--fg)", margin: 0, letterSpacing: "-0.02em" }}>
-            Sender 名單
-          </h1>
-          <p style={{ fontSize: 13, color: "var(--fg-subtle)", margin: "3px 0 0" }}>
-            共 {senders.length} 筆 · 自動學習寄件者角色
-          </p>
-        </div>
+      {/* Toolbar */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 16 }}>
         <button className="btn-primary" style={{ gap: 6 }}>
           <Plus size={13} />
           新增

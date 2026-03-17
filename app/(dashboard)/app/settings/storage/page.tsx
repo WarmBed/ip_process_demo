@@ -111,15 +111,6 @@ export default function StoragePage() {
         <span style={{ color: "var(--fg)" }}>儲存空間</span>
       </div>
 
-      <div style={{ marginBottom: 24 }}>
-        <h1 style={{ fontSize: 18, fontWeight: 600, color: "var(--fg)", margin: "0 0 4px", letterSpacing: "-0.02em" }}>
-          儲存空間
-        </h1>
-        <p style={{ fontSize: 13, color: "var(--fg-subtle)", margin: 0 }}>
-          選擇 EML 和附件的存放位置。系統記錄檔案路徑，方便快速搜尋和存取。
-        </p>
-      </div>
-
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
         {providers.map((p) => (
           <div key={p.id} style={{
