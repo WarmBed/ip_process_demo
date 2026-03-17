@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Mail, Settings, BarChart2, Users, BookOpen, ChevronDown, Briefcase, LayoutTemplate, CheckSquare, Loader2 } from "lucide-react";
+import { Mail, Settings, BarChart2, Users, BookOpen, ChevronDown, Briefcase, LayoutTemplate, CheckSquare, Loader2, Sparkles } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/app",                  label: "總覽",     icon: BarChart2 },
@@ -64,8 +64,16 @@ export default function Navbar() {
         </Link>
       </nav>
 
-      {/* Right: tenant + user */}
+      {/* Right: setup + tenant + user */}
       <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+        <Link href="/app/setup" style={{
+          display: "inline-flex", alignItems: "center", gap: 5,
+          padding: "5px 12px", borderRadius: 6, textDecoration: "none",
+          border: "1px solid var(--border)", background: "var(--sl2)",
+          fontSize: 12, fontWeight: 500, color: "var(--fg-muted)",
+        }}>
+          <Sparkles size={12} />新手設定
+        </Link>
         {/* Tenant badge */}
         <div style={{
           display: "flex", alignItems: "center", gap: 6,

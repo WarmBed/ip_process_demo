@@ -4,7 +4,7 @@ import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import {
-  Mail, TrendingUp, AlertCircle, CheckCircle, ChevronRight, HelpCircle, Sparkles,
+  Mail, TrendingUp, AlertCircle, CheckCircle, ChevronRight, HelpCircle,
   Clock, CheckSquare, X, Bot, CheckCircle2, Circle, ExternalLink, User, Scale, ArrowRight,
 } from "lucide-react";
 import type { ApiResponse, EmailListItem } from "@/lib/types";
@@ -44,7 +44,7 @@ function StatCard({ label, value, sub, accent = false, last = false }: {
       background: accent ? "#fffbeb" : "transparent",
     }}>
       <div style={{ fontSize: 12, color: accent ? "#92400e" : "var(--fg-subtle)", fontWeight: 500, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 20, fontWeight: 700, color: accent ? "#92400e" : "var(--fg)", letterSpacing: "-0.02em", lineHeight: 1.2 }}>{value}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: accent ? "#92400e" : "var(--fg)", letterSpacing: "-0.01em", lineHeight: 1.2 }}>{value}</div>
       {sub && <div style={{ fontSize: 12, color: accent ? "#b45309" : "var(--fg-subtle)", marginTop: 4 }}>{sub}</div>}
     </div>
   );
@@ -265,23 +265,11 @@ export default function AppOverviewPage() {
         <div style={{ maxWidth: 900 }}>
 
           {/* Header */}
-          <div style={{ marginBottom: 22, display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
-            <div>
-              <h1 style={{ fontSize: 18, fontWeight: 600, color: "var(--fg)", margin: 0, letterSpacing: "-0.02em" }}>總覽</h1>
-              <p style={{ fontSize: 13, color: "var(--fg-subtle)", margin: "3px 0 0" }}>
-                IP Winner · 今日 {new Date().toLocaleDateString("zh-TW", { month: "long", day: "numeric" })}
-              </p>
-            </div>
-            <Link href="/app/setup" style={{
-              display: "inline-flex", alignItems: "center", gap: 6,
-              padding: "8px 16px", borderRadius: 8, textDecoration: "none",
-              background: "var(--fg)",
-              color: "var(--bg)", fontSize: 12, fontWeight: 600,
-              boxShadow: "0 2px 8px rgba(0,0,0,0.12)",
-            }}>
-              <Sparkles size={13} />
-              新手設定精靈
-            </Link>
+          <div style={{ marginBottom: 22 }}>
+            <h1 style={{ fontSize: 18, fontWeight: 600, color: "var(--fg)", margin: 0, letterSpacing: "-0.02em" }}>總覽</h1>
+            <p style={{ fontSize: 13, color: "var(--fg-subtle)", margin: "3px 0 0" }}>
+              IP Winner · 今日 {new Date().toLocaleDateString("zh-TW", { month: "long", day: "numeric" })}
+            </p>
           </div>
 
           {/* Stat cards */}
