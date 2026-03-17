@@ -3,10 +3,14 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mail, TrendingUp, AlertCircle, CheckCircle, ChevronRight, HelpCircle, Sparkles, Clock, Hash, CheckSquare } from "lucide-react";
+import {
+  Mail, TrendingUp, AlertCircle, CheckCircle, ChevronRight, HelpCircle, Sparkles,
+  Clock, CheckSquare, X, Bot, CheckCircle2, Circle, ExternalLink, User, Scale, ArrowRight,
+} from "lucide-react";
 import type { ApiResponse, EmailListItem } from "@/lib/types";
 import { MOCK_STATS } from "@/lib/mock-data";
 import { MOCK_TODOS, DIRECTION_CONFIG } from "@/lib/mock-todo";
+import type { TodoItem } from "@/lib/mock-todo";
 import { EmailDetailPanel } from "@/components/email-detail-panel";
 
 const PENDING_REASONS: Record<string, { reason: string; detail: string; tag: string; tagColor: string }> = {
@@ -56,12 +60,166 @@ function daysUntil(iso?: string) {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
 }
 
+// ── Todo detail panel (overview inline) ──────────────────────────
+
+const WHO_ICON: Record<string, React.ReactNode> = {
+  "我方":    <User size={12} />,
+  "客戶":    <User size={12} />,
+  "代理人":  <Scale size={12} />,
+  "政府機關": <Scale size={12} />,
+};
+
+const DIR_ICON: Record<string, React.ReactNode> = {
+  send:     <ArrowRight size={12} />,
+  wait:     <Clock size={12} />,
+  review:   <Scale size={12} />,
+  internal: <User size={12} />,
+};
+
+function TodoDetailPanel({ todo, onClose, onDone, isDone, onNavigate }: {
+  todo: TodoItem;
+  onClose: () => void;
+  onDone: () => void;
+  isDone: boolean;
+  onNavigate: (url: string) => void;
+}) {
+  const days   = daysUntil(todo.deadline);
+  const dir    = DIRECTION_CONFIG[todo.direction];
+  const isUrg  = todo.priority === "urgent";
+  const deadlineColor = days === null ? "var(--fg-subtle)" : days <= 7 ? "#dc2626" : days <= 21 ? "#d97706" : "var(--fg-subtle)";
+
+  return (
+    <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
+      {/* Header */}
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", background: "var(--sl2)", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+        <div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "ui-monospace, monospace", color: "var(--fg)", background: "var(--sl3)", padding: "2px 7px", borderRadius: 4, border: "1px solid var(--border)" }}>
+              {todo.case_number}
+            </span>
+            <span style={{ fontSize: 11, fontWeight: 600, color: dir.color, background: dir.bg, padding: "1px 6px", borderRadius: 4, display: "flex", alignItems: "center", gap: 3 }}>
+              {DIR_ICON[todo.direction]}{dir.label}
+            </span>
+            {isUrg && <span style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", background: "#fef2f2", padding: "1px 6px", borderRadius: 4, border: "1px solid #fecaca" }}>急</span>}
+          </div>
+          <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: 3 }}>{todo.client}</div>
+        </div>
+        <button onClick={onClose} className="btn-ghost" style={{ padding: "4px", flexShrink: 0 }}>
+          <X size={14} />
+        </button>
+      </div>
+
+      {/* Scrollable body */}
+      <div style={{ flex: 1, overflowY: "auto", padding: "16px" }}>
+
+        {/* Action */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 5 }}>下一步動作</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)", lineHeight: 1.5 }}>{todo.action}</div>
+        </div>
+
+        {/* Detail */}
+        {todo.detail && (
+          <div style={{ marginBottom: 16, padding: "12px 14px", background: "var(--sl2)", borderRadius: 8, border: "1px solid var(--border)" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>狀況說明</div>
+            <p style={{ fontSize: 13, color: "var(--fg)", lineHeight: 1.7, margin: 0 }}>{todo.detail}</p>
+          </div>
+        )}
+
+        {/* AI suggestion */}
+        {todo.ai_suggestion && (
+          <div style={{ marginBottom: 16, padding: "10px 12px", background: "#eef2ff", borderRadius: 8, borderLeft: "3px solid #6366f1", display: "flex", gap: 8 }}>
+            <Bot size={14} color="#6366f1" style={{ flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: 12, color: "#3730a3", margin: 0, lineHeight: 1.6 }}>{todo.ai_suggestion}</p>
+          </div>
+        )}
+
+        {/* Meta */}
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16, padding: "12px 14px", background: "var(--sl1)", borderRadius: 8, border: "1px solid var(--border)" }}>
+          {[
+            { label: "誰要動",  value: <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{WHO_ICON[todo.who]}{todo.who}</span> },
+            { label: "動作類型", value: <span style={{ color: dir.color, display: "inline-flex", alignItems: "center", gap: 3 }}>{DIR_ICON[todo.direction]}{dir.label}</span> },
+            { label: "截止日期", value: todo.deadline ? (
+              <span style={{ color: deadlineColor, display: "inline-flex", alignItems: "center", gap: 4 }}>
+                <Clock size={11} />
+                {new Date(todo.deadline).toLocaleDateString("zh-TW", { month: "long", day: "numeric" })}
+                {days !== null && <span style={{ fontSize: 10 }}>（{days <= 0 ? `逾期 ${Math.abs(days)} 天` : `${days} 天後`}）</span>}
+              </span>
+            ) : "—" },
+            { label: "優先級",  value: todo.priority === "urgent" ? <span style={{ color: "#dc2626", fontWeight: 600 }}>急</span> : todo.priority === "normal" ? "一般" : "低" },
+          ].map(({ label, value }) => (
+            <div key={label} style={{ display: "flex", gap: 10, fontSize: 12 }}>
+              <span style={{ color: "var(--fg-subtle)", minWidth: 56, flexShrink: 0 }}>{label}</span>
+              <span style={{ color: "var(--fg)" }}>{value}</span>
+            </div>
+          ))}
+        </div>
+
+        {/* Tags */}
+        {todo.tags.length > 0 && (
+          <div style={{ marginBottom: 16, display: "flex", gap: 5, flexWrap: "wrap" }}>
+            {todo.tags.map(tag => (
+              <span key={tag} style={{ fontSize: 11, color: "var(--fg-subtle)", background: "var(--sl3)", padding: "2px 7px", borderRadius: 4, border: "1px solid var(--border)" }}>{tag}</span>
+            ))}
+          </div>
+        )}
+
+        {/* Source email */}
+        <div style={{ marginBottom: 16 }}>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>來源信件</div>
+          <button
+            onClick={() => onNavigate(`/app/emails/${todo.source_email_id}`)}
+            style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "9px 12px", border: "1px solid var(--border)", borderRadius: 7, background: "var(--bg)", cursor: "pointer", textAlign: "left" }}
+          >
+            <Mail size={13} color="var(--fg-muted)" style={{ flexShrink: 0 }} />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <div style={{ fontSize: 12, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{todo.source_subject}</div>
+              <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: 1 }}>
+                {new Date(todo.source_date).toLocaleDateString("zh-TW", { month: "2-digit", day: "2-digit" })}
+              </div>
+            </div>
+            <ExternalLink size={11} color="var(--fg-subtle)" style={{ flexShrink: 0 }} />
+          </button>
+        </div>
+
+        {/* Full todo link */}
+        <Link href={`/app/todo`} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--fg-muted)", textDecoration: "none" }}>
+          <CheckSquare size={12} />在待辦清單中查看 <ChevronRight size={11} />
+        </Link>
+      </div>
+
+      {/* Footer action */}
+      <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
+        <button
+          onClick={onDone}
+          style={{
+            width: "100%", padding: "9px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
+            background: isDone ? "var(--sl3)" : "#166534", color: isDone ? "var(--fg-muted)" : "#fff",
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
+          }}
+        >
+          {isDone ? <><Circle size={14} />取消完成</> : <><CheckCircle2 size={14} />標記完成</>}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── Page ──────────────────────────────────────────────────────────
+
 export default function AppOverviewPage() {
   const router = useRouter();
-  const [emails, setEmails]         = useState<EmailListItem[]>([]);
-  const [doneTodos, setDoneTodos]   = useState<Set<string>>(new Set());
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [panelWidth, setPanelWidth] = useState(400);
+  const [emails, setEmails]             = useState<EmailListItem[]>([]);
+  const [doneTodos, setDoneTodos]       = useState<Set<string>>(new Set());
+  const [selectedId, setSelectedId]     = useState<string | null>(null);
+  const [selectedTodoId, setSelectedTodoId] = useState<string | null>(null);
+  const [panelWidth, setPanelWidth]     = useState(400);
+
+  const panelType = selectedId ? "email" : selectedTodoId ? "todo" : null;
+  const panelOpen = panelType !== null;
+
+  const selectEmail = (id: string | null) => { setSelectedId(id); setSelectedTodoId(null); };
+  const selectTodo  = (id: string | null) => { setSelectedTodoId(id); setSelectedId(null); };
 
   const panelResizing    = useRef(false);
   const panelResizeStart = useRef({ mx: 0, pw: 400 });
@@ -98,8 +256,8 @@ export default function AppOverviewPage() {
     document.body.style.userSelect = "none";
   }, [panelWidth]);
 
-  const todayStr    = new Date().toISOString().slice(0, 10);
-  const todayMsgs   = emails.filter(e => e.received_at.startsWith(todayStr));
+  const todayStr   = new Date().toISOString().slice(0, 10);
+  const todayMsgs  = emails.filter(e => e.received_at.startsWith(todayStr));
   const classified  = emails.filter(e => e.status !== "pending");
   const pending     = emails.filter(e => e.status === "pending");
   const recentEmails = [...emails].sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime()).slice(0, 5);
@@ -157,7 +315,7 @@ export default function AppOverviewPage() {
                 const isSelected = selectedId === e.id;
                 return (
                   <div key={e.id}
-                    onClick={() => setSelectedId(isSelected ? null : e.id)}
+                    onClick={() => selectEmail(isSelected ? null : e.id)}
                     style={{
                       padding: "12px 16px",
                       borderBottom: i < pending.length - 1 ? "1px solid #fde68a" : "none",
@@ -205,7 +363,7 @@ export default function AppOverviewPage() {
                 const isSelected = selectedId === e.id;
                 return (
                   <div key={e.id}
-                    onClick={() => setSelectedId(isSelected ? null : e.id)}
+                    onClick={() => selectEmail(isSelected ? null : e.id)}
                     style={{
                       display: "flex", alignItems: "center", gap: 10, padding: "10px 16px",
                       borderBottom: i < recentEmails.length - 1 ? "1px solid var(--border)" : "none",
@@ -261,20 +419,26 @@ export default function AppOverviewPage() {
 
                   <div style={{ flex: 1, overflowY: "auto" }}>
                     {visibleTodos.map((t, i) => {
-                      const days = daysUntil(t.deadline);
-                      const dir  = DIRECTION_CONFIG[t.direction];
-                      const isUrgent = t.priority === "urgent";
+                      const days       = daysUntil(t.deadline);
+                      const dir        = DIRECTION_CONFIG[t.direction];
+                      const isUrgent   = t.priority === "urgent";
+                      const isSelected = selectedTodoId === t.id;
                       return (
-                        <div key={t.id} style={{
-                          padding: "10px 14px",
-                          borderBottom: i < visibleTodos.length - 1 ? "1px solid var(--border)" : "none",
-                          borderLeft: `3px solid ${isUrgent ? "#dc2626" : "#d97706"}`,
-                          background: isUrgent ? "#fff5f5" : "transparent",
-                          display: "flex", alignItems: "flex-start", gap: 10,
-                        }}>
+                        <div
+                          key={t.id}
+                          onClick={() => selectTodo(isSelected ? null : t.id)}
+                          style={{
+                            padding: "10px 14px",
+                            borderBottom: i < visibleTodos.length - 1 ? "1px solid var(--border)" : "none",
+                            borderLeft: `3px solid ${isSelected ? "#6366f1" : isUrgent ? "#dc2626" : "#d97706"}`,
+                            background: isSelected ? "#eef2ff" : isUrgent ? "#fff5f5" : "transparent",
+                            display: "flex", alignItems: "flex-start", gap: 10,
+                            cursor: "pointer", transition: "background 0.1s",
+                          }}
+                        >
                           {/* Checkbox */}
                           <button
-                            onClick={() => setDoneTodos(prev => { const n = new Set(prev); n.add(t.id); return n; })}
+                            onClick={(e) => { e.stopPropagation(); setDoneTodos(prev => { const n = new Set(prev); n.add(t.id); return n; }); }}
                             style={{ background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 1, flexShrink: 0, color: "var(--fg-subtle)" }}
                           >
                             <CheckSquare size={14} />
@@ -331,16 +495,16 @@ export default function AppOverviewPage() {
 
       {/* ── Right detail panel ── */}
       <div style={{
-        width: selectedId ? panelWidth : 0,
+        width: panelOpen ? panelWidth : 0,
         overflow: "hidden",
-        borderLeft: selectedId ? "1px solid var(--border)" : "none",
+        borderLeft: panelOpen ? "1px solid var(--border)" : "none",
         background: "var(--bg)",
         flexShrink: 0,
         display: "flex", flexDirection: "column",
         position: "relative",
-        transition: selectedId ? "none" : "width 0.2s",
+        transition: panelOpen ? "none" : "width 0.2s",
       }}>
-        {selectedId && (
+        {panelOpen && (
           <>
             <div onMouseDown={onPanelResizeDown} style={{
               position: "absolute", left: -3, top: 0, bottom: 0, width: 6,
@@ -348,11 +512,25 @@ export default function AppOverviewPage() {
             }}>
               <div style={{ width: 2, height: 32, borderRadius: 2, background: "var(--sl7)", opacity: 0.5 }} />
             </div>
-            <EmailDetailPanel
-              emailId={selectedId}
-              onClose={() => setSelectedId(null)}
-              onNavigate={(url) => router.push(url)}
-            />
+            {panelType === "email" && selectedId && (
+              <EmailDetailPanel
+                emailId={selectedId}
+                onClose={() => selectEmail(null)}
+                onNavigate={(url) => router.push(url)}
+              />
+            )}
+            {panelType === "todo" && selectedTodoId && (() => {
+              const todo = MOCK_TODOS.find(t => t.id === selectedTodoId)!;
+              return (
+                <TodoDetailPanel
+                  todo={todo}
+                  onClose={() => selectTodo(null)}
+                  isDone={doneTodos.has(todo.id)}
+                  onDone={() => setDoneTodos(prev => { const n = new Set(prev); n.has(todo.id) ? n.delete(todo.id) : n.add(todo.id); return n; })}
+                  onNavigate={(url) => router.push(url)}
+                />
+              );
+            })()}
           </>
         )}
       </div>
