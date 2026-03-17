@@ -3,9 +3,10 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { Mail, TrendingUp, AlertCircle, CheckCircle, ChevronRight, HelpCircle, Sparkles } from "lucide-react";
-import type { ApiResponse, EmailListItem, BenefitsStat } from "@/lib/types";
+import { Mail, TrendingUp, AlertCircle, CheckCircle, ChevronRight, HelpCircle, Sparkles, Clock, Hash, CheckSquare } from "lucide-react";
+import type { ApiResponse, EmailListItem } from "@/lib/types";
 import { MOCK_STATS } from "@/lib/mock-data";
+import { MOCK_TODOS, DIRECTION_CONFIG } from "@/lib/mock-todo";
 import { EmailDetailPanel } from "@/components/email-detail-panel";
 
 const PENDING_REASONS: Record<string, { reason: string; detail: string; tag: string; tagColor: string }> = {
@@ -50,10 +51,15 @@ function StatCard({ label, value, sub, icon, accent = false }: {
   );
 }
 
+function daysUntil(iso?: string) {
+  if (!iso) return null;
+  return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
+}
+
 export default function AppOverviewPage() {
   const router = useRouter();
   const [emails, setEmails]         = useState<EmailListItem[]>([]);
-  const [benefits, setBenefits]     = useState<BenefitsStat[]>([]);
+  const [doneTodos, setDoneTodos]   = useState<Set<string>>(new Set());
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [panelWidth, setPanelWidth] = useState(400);
 
@@ -64,10 +70,6 @@ export default function AppOverviewPage() {
     fetch("/api/v1/emails?limit=20")
       .then(r => r.json())
       .then((d: ApiResponse<EmailListItem[]>) => setEmails(d.data ?? []))
-      .catch(() => {});
-    fetch("/api/v1/stats")
-      .then(r => r.json())
-      .then((d: ApiResponse<typeof MOCK_STATS & { benefits: BenefitsStat[] }>) => setBenefits(d.data?.benefits ?? []))
       .catch(() => {});
   }, []);
 
@@ -190,8 +192,8 @@ export default function AppOverviewPage() {
             </div>
           )}
 
-          {/* Two columns: recent emails + chart */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 16 }}>
+          {/* Two columns: recent emails + urgent todos */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 16 }}>
 
             {/* Recent emails */}
             <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
@@ -229,25 +231,100 @@ export default function AppOverviewPage() {
               })}
             </div>
 
-            {/* Right: daily chart */}
-            <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-              <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border)", background: "var(--sl2)", fontSize: 12, fontWeight: 600, color: "var(--fg)" }}>
-                近 5 日處理量
-              </div>
-              {benefits.slice(-5).map((b) => {
-                const maxVal = Math.max(...benefits.map(x => x.emails_processed), 1);
-                const pct = Math.round((b.emails_processed / maxVal) * 100);
-                return (
-                  <div key={b.date} style={{ display: "flex", alignItems: "center", gap: 10, padding: "7px 14px", borderBottom: "1px solid var(--border)" }}>
-                    <span style={{ fontSize: 11, color: "var(--fg-subtle)", minWidth: 32 }}>{b.date.slice(5)}</span>
-                    <div style={{ flex: 1, height: 6, background: "var(--sl4)", borderRadius: 3, overflow: "hidden" }}>
-                      <div style={{ width: `${pct}%`, height: "100%", background: "var(--fg)", borderRadius: 3 }} />
+            {/* Right: urgent todos */}
+            {(() => {
+              const urgentTodos = MOCK_TODOS
+                .filter(t => !doneTodos.has(t.id) && t.status !== "done" && t.priority === "urgent")
+                .slice(0, 4);
+              const normalTodos = MOCK_TODOS
+                .filter(t => !doneTodos.has(t.id) && t.status !== "done" && t.priority === "normal")
+                .slice(0, 2);
+              const visibleTodos = [...urgentTodos, ...normalTodos].slice(0, 5);
+              const totalPending = MOCK_TODOS.filter(t => !doneTodos.has(t.id) && t.status !== "done").length;
+
+              return (
+                <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", display: "flex", flexDirection: "column" }}>
+                  <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border)", background: "var(--sl2)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                      <CheckSquare size={13} color="var(--fg-muted)" />
+                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>案件待辦</span>
+                      {urgentTodos.length > 0 && (
+                        <span style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", background: "#fef2f2", padding: "0 5px", borderRadius: 8, border: "1px solid #fecaca" }}>
+                          {urgentTodos.length} 急
+                        </span>
+                      )}
                     </div>
-                    <span style={{ fontSize: 11, color: "var(--fg-muted)", minWidth: 20, textAlign: "right" }}>{b.emails_processed}</span>
+                    <Link href="/app/todo" style={{ fontSize: 12, color: "var(--fg-muted)", textDecoration: "none", display: "flex", alignItems: "center", gap: 2 }}>
+                      全部 {totalPending} 件 <ChevronRight size={11} />
+                    </Link>
                   </div>
-                );
-              })}
-            </div>
+
+                  <div style={{ flex: 1, overflowY: "auto" }}>
+                    {visibleTodos.map((t, i) => {
+                      const days = daysUntil(t.deadline);
+                      const dir  = DIRECTION_CONFIG[t.direction];
+                      const isUrgent = t.priority === "urgent";
+                      return (
+                        <div key={t.id} style={{
+                          padding: "10px 14px",
+                          borderBottom: i < visibleTodos.length - 1 ? "1px solid var(--border)" : "none",
+                          borderLeft: `3px solid ${isUrgent ? "#dc2626" : "#d97706"}`,
+                          background: isUrgent ? "#fff5f5" : "transparent",
+                          display: "flex", alignItems: "flex-start", gap: 10,
+                        }}>
+                          {/* Checkbox */}
+                          <button
+                            onClick={() => setDoneTodos(prev => { const n = new Set(prev); n.add(t.id); return n; })}
+                            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 1, flexShrink: 0, color: "var(--fg-subtle)" }}
+                          >
+                            <CheckSquare size={14} />
+                          </button>
+
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            {/* Case + direction badge */}
+                            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
+                              <span style={{ fontSize: 10, fontWeight: 700, fontFamily: "ui-monospace, monospace", color: "var(--fg-muted)", background: "var(--sl3)", padding: "1px 5px", borderRadius: 3, border: "1px solid var(--border)" }}>
+                                {t.case_number}
+                              </span>
+                              <span style={{ fontSize: 10, fontWeight: 600, color: dir.color, background: dir.bg, padding: "1px 5px", borderRadius: 3 }}>
+                                {dir.label}
+                              </span>
+                            </div>
+                            {/* Action */}
+                            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--fg)", lineHeight: 1.4, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                              {t.action}
+                            </div>
+                            {/* Deadline */}
+                            {days !== null && (
+                              <div style={{ marginTop: 4, fontSize: 11, color: days <= 7 ? "#dc2626" : days <= 21 ? "#d97706" : "var(--fg-subtle)", display: "flex", alignItems: "center", gap: 3 }}>
+                                <Clock size={10} />
+                                {days <= 0 ? `逾期 ${Math.abs(days)} 天` : `${days} 天後截止`}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+
+                    {visibleTodos.length === 0 && (
+                      <div style={{ padding: "24px 14px", textAlign: "center", fontSize: 12, color: "var(--fg-subtle)" }}>
+                        <CheckCircle size={20} color="#16a34a" style={{ marginBottom: 6 }} /><br />
+                        目前無待辦事項
+                      </div>
+                    )}
+                  </div>
+
+                  <Link href="/app/todo" style={{
+                    padding: "9px 14px", borderTop: "1px solid var(--border)",
+                    fontSize: 12, color: "var(--fg-muted)", textDecoration: "none",
+                    display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                    background: "var(--sl1)", transition: "background 0.1s",
+                  }}>
+                    <CheckSquare size={12} />查看完整待辦清單
+                  </Link>
+                </div>
+              );
+            })()}
           </div>
         </div>
       </div>
