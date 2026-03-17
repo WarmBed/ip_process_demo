@@ -6,6 +6,7 @@ import { Mail, Settings, ChevronDown } from "lucide-react";
 
 const NAV_ITEMS = [
   { href: "/app",           label: "總覽" },
+  { href: "/app/patent",    label: "IP概況" },
   { href: "/app/cases",     label: "案件" },
   { href: "/app/deadlines", label: "期限" },
   { href: "/app/emails",    label: "信件" },
