@@ -76,7 +76,6 @@ a { color: inherit; text-decoration: none; }
    RESPONSIVE — Mobile ≤ 768px
    ══════════════════════════════════════════ */
 @media (max-width: 768px) {
-  .agent-panel-wrap { display: none !important; }
   .col-hide-m { display: none !important; }
   .stat-row { flex-wrap: wrap !important; }
   .stat-row > div { flex: 1 1 45% !important; min-width: 0 !important; }
