@@ -21,16 +21,10 @@ function injectStyles() {
 }
 
 interface LoadingProps {
-  /** Vertical padding around the widget. Default: 48px */
   pad?: number;
-  /** Override label. Default: "Retrieving" */
   label?: string;
 }
 
-/**
- * Ruled Line loading indicator — a thin rule draws under small-caps text.
- * Professional, minimal, no bounce.
- */
 export function Loading({ pad = 48, label = "Retrieving" }: LoadingProps) {
   if (typeof window !== "undefined") injectStyles();
 
@@ -46,7 +40,7 @@ export function Loading({ pad = 48, label = "Retrieving" }: LoadingProps) {
           fontSize: 10,
           fontWeight: 700,
           letterSpacing: "0.22em",
-          color: "var(--fg)",
+          color: "var(--gray-12)",
           textTransform: "uppercase",
           marginBottom: 10,
           animation: "lp-fade 0.4s ease both",
@@ -55,7 +49,7 @@ export function Loading({ pad = 48, label = "Retrieving" }: LoadingProps) {
         </div>
         <div style={{
           height: 1,
-          background: "var(--fg)",
+          background: "var(--green-9)",
           animation: "lp-draw 1.4s cubic-bezier(0.4,0,0.2,1) infinite alternate",
         }} />
       </div>

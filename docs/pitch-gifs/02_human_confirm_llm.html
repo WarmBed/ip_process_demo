@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>IP Winner — 人工確認 + LLM 學習</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter','Noto Sans TC',sans-serif; background:#ffffff; color:#1c2024; width:1280px; height:720px; overflow:hidden; }
+
+  /* ── Header / Navbar ── */
+  .header { display:flex; align-items:center; justify-content:space-between; padding:0 16px; height:48px; background:#fff; border-bottom:1px solid #e8e8ec; }
+  .header-left { display:flex; align-items:center; gap:16px; }
+  .logo-wrap { display:flex; align-items:center; gap:8px; }
+  .logo-icon { width:26px; height:26px; background:#1c2024; border-radius:6px; display:flex; align-items:center; justify-content:center; }
+  .logo-icon svg { width:14px; height:14px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .logo-text { font-size:14px; font-weight:600; color:#1c2024; }
+  .nav { display:flex; gap:2px; }
+  .nav a { font-size:13px; font-weight:450; color:#60646c; padding:6px 12px; text-decoration:none; border-radius:6px; transition:all .15s; }
+  .nav a:hover { background:#f0f0f3; color:#1c2024; }
+  .nav a.active { background:#f0f0f3; color:#1c2024; font-weight:500; }
+  .header-right { display:flex; align-items:center; gap:10px; font-size:13px; font-weight:450; color:#60646c; }
+  .avatar { width:28px; height:28px; border-radius:50%; background:#6366f1; color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; }
+
+  /* ── Layout ── */
+  .main { display:flex; height:calc(100% - 48px); }
+
+  /* ── AI Sidebar ── */
+  .sidebar { width:220px; background:#1a1a1e; color:#ccc; padding:14px; flex-shrink:0; display:flex; flex-direction:column; }
+  .sidebar-title { font-size:13px; color:#888; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+  .chat-bubble { background:#27272a; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.6; margin-bottom:8px; color:#d4d4d8; border-left:3px solid #6366f1; }
+  .sidebar-suggestions { margin-top:auto; }
+  .suggest-label { font-size:11px; color:#666; margin-bottom:6px; margin-top:10px; }
+  .suggest-btn { display:inline-block; font-size:11px; color:#a1a1aa; background:#27272a; border-radius:6px; padding:4px 10px; margin:2px 4px 2px 0; }
+  .sidebar-input { display:flex; align-items:center; gap:8px; margin-top:12px; padding:8px 12px; background:#27272a; border-radius:8px; }
+  .sidebar-input span { font-size:12px; color:#52525b; }
+
+  .content { flex:1; padding:24px 28px; display:flex; gap:20px; overflow:hidden; max-width:900px; }
+  .col-left { width:460px; flex-shrink:0; }
+  .col-right { flex:1; }
+
+  /* ── Alert ── */
+  .alert { display:flex; align-items:center; gap:10px; padding:12px 16px; background:#fffbeb; border:1px solid #fef08a; border-radius:8px; margin-bottom:14px;
+    opacity:0; transform:translateY(-8px); transition:all .4s; }
+  .alert.show { opacity:1; transform:translateY(0); }
+  .alert-icon { font-size:18px; }
+  .alert-text { font-size:13px; color:#92400e; font-weight:600; }
+  .alert-sub { font-size:11px; color:#a16207; }
+
+  /* ── Card ── */
+  .card { border:1px solid #e8e8ec; border-radius:8px; padding:14px 16px; margin-bottom:12px;
+    opacity:0; transition:all .4s; }
+  .card.show { opacity:1; }
+  .email-meta { font-size:11px; color:#8b8d98; margin-bottom:4px; }
+  .email-subject { font-size:15px; font-weight:600; color:#1c2024; margin-bottom:8px; }
+  .attach { display:inline-flex; align-items:center; gap:6px; font-size:11px; color:#60646c; background:#f9f9fb; border:1px solid #e8e8ec; border-radius:6px; padding:5px 10px; }
+
+  /* ── AI Judge ── */
+  .ai-judge { background:#fff7ed; border:1px solid #fed7aa; border-radius:8px; padding:12px 14px; margin-bottom:12px;
+    opacity:0; transition:all .4s; }
+  .ai-judge.show { opacity:1; }
+  .ai-judge-title { font-size:12px; color:#c2410c; font-weight:600; margin-bottom:6px; }
+  .ai-judge-text { font-size:12px; color:#92400e; line-height:1.6; }
+  .confidence-tag { display:inline-block; font-size:10px; font-weight:600; color:#92400e; background:#fef3c7; border-radius:4px; padding:2px 8px; margin-top:6px; }
+
+  /* ── Form ── */
+  .form-card { border:1px solid #e8e8ec; border-radius:8px; padding:16px; background:#fff;
+    opacity:0; transform:translateY(12px); transition:all .5s; }
+  .form-card.show { opacity:1; transform:translateY(0); }
+  .form-title { font-size:14px; font-weight:600; color:#1c2024; margin-bottom:14px; }
+  .form-group { margin-bottom:12px; }
+  .form-label { font-size:11px; color:#8b8d98; font-weight:500; margin-bottom:4px; }
+  .form-input { width:100%; padding:9px 12px; font-size:13px; background:#f9f9fb; border:1px solid #e8e8ec; border-radius:6px; color:#1c2024; font-family:inherit; transition:border .3s; }
+  .form-input:focus,.form-input.typing { border-color:#6366f1; outline:none; }
+  .form-input.done { border-color:#16a34a; background:#f0fdf4; }
+  textarea.form-input { height:60px; resize:none; line-height:1.5; }
+  .form-select { width:100%; padding:9px 12px; font-size:13px; background:#f9f9fb; border:1px solid #e8e8ec; border-radius:6px; color:#8b8d98; font-family:inherit; }
+  .form-select.filled { color:#1c2024; }
+  .btn { width:100%; padding:10px; border:none; border-radius:6px; font-size:13px; font-weight:600; font-family:inherit; cursor:pointer; transition:all .3s; background:#f0f0f3; color:#8b8d98; }
+  .btn.ready { background:#6366f1; color:#fff; }
+  .btn.sent { background:#16a34a; color:#fff; }
+
+  /* ── Right: LLM ── */
+  .llm-card { border:1px solid #e8e8ec; border-radius:8px; overflow:hidden; }
+  .llm-head { padding:9px 14px; border-bottom:1px solid #e8e8ec; background:#eff6ff; display:flex; align-items:center; gap:8px; }
+  .llm-head-title { font-size:13px; font-weight:600; color:#1c2024; }
+  .llm-body { padding:14px; }
+
+  .llm-step { display:flex; gap:12px; margin-bottom:14px; opacity:0; transform:translateX(12px); transition:all .5s; }
+  .llm-step.show { opacity:1; transform:translateX(0); }
+  .llm-num { width:24px; height:24px; border-radius:50%; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; flex-shrink:0;
+    background:#f0f0f3; color:#8b8d98; transition:all .3s; }
+  .llm-num.active { background:#eff6ff; color:#3b82f6; animation:pulse 1s infinite; }
+  .llm-num.done { background:#f0fdf4; color:#16a34a; }
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.5}}
+  .llm-label { font-size:13px; color:#8b8d98; font-weight:500; }
+  .llm-label.active { color:#3b82f6; }
+  .llm-label.done { color:#16a34a; }
+  .llm-desc { font-size:11px; color:#cdced6; margin-top:3px; }
+
+  .rule-card { background:#f9f9fb; border:1px solid #e8e8ec; border-radius:8px; padding:12px 14px; margin-top:10px;
+    opacity:0; transform:scale(.96); transition:all .5s; }
+  .rule-card.show { opacity:1; transform:scale(1); }
+  .rule-id { font-size:12px; color:#6366f1; font-weight:600; margin-bottom:8px; }
+  .rule-row { display:flex; gap:8px; margin-bottom:4px; font-size:11px; }
+  .rule-key { color:#8b8d98; min-width:50px; }
+  .rule-val { color:#1c2024; }
+  .rule-val.green { color:#16a34a; }
+
+  .stats-box { margin-top:14px; padding:12px 14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px;
+    opacity:0; transition:all .4s; }
+  .stats-box.show { opacity:1; }
+  .stats-title { font-size:12px; color:#16a34a; font-weight:600; margin-bottom:6px; }
+  .stats-text { font-size:11px; color:#15803d; line-height:1.7; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="logo-wrap">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>
+      </div>
+      <div class="logo-text">IP Winner</div>
+    </div>
+    <div class="nav"><a href="#" class="active">總覽</a><a href="#">IP概況</a><a href="#">案件</a><a href="#">期限</a><a href="#">信件</a><a href="#">待辦</a><a href="#">客戶</a><a href="#">人員</a><a href="#">月報</a><a href="#">統計</a><a href="#">設定</a></div>
+  </div>
+  <div class="header-right">IP Winner ▾ <div class="avatar">U</div></div>
+</div>
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-title">🧠 AI 助理 ‹</div>
+    <div class="chat-bubble">偵測到 1 封信件 AI 信心度不足（42%），已放入「待人工確認」區。</div>
+    <div class="sidebar-suggestions">
+      <div class="suggest-label">📊 IP概況</div>
+      <div class="suggest-btn">目前有幾件OA待答辯</div>
+      <div class="suggest-btn">7天內截止案件</div>
+      <div class="suggest-label">📧 信件</div>
+      <div class="suggest-btn">今日官方來文</div>
+    </div>
+    <div class="sidebar-input"><span>💬 問題或說「帶我去...」</span></div>
+  </div>
+  <div class="content">
+    <div class="col-left">
+      <div class="alert" id="alert">
+        <span class="alert-icon">⚠️</span>
+        <div><div class="alert-text">AI 無法辨識 — 需人工確認</div><div class="alert-sub">信心度低於閾值 (42% &lt; 80%)</div></div>
+      </div>
+      <div class="card" id="emailCard">
+        <div class="email-meta">來自：patent@bskb-law.com · 2026-03-19 09:14</div>
+        <div class="email-subject">RE: Case Update - ABCD12345 / ABCD12346</div>
+        <div class="attach">📎 draft_response_v2_final.docx (2.4 MB)</div>
+      </div>
+      <div class="ai-judge" id="aiJudge">
+        <div class="ai-judge-title">🤖 AI 判斷</div>
+        <div class="ai-judge-text">無法確定收發碼：可能是 <b>ABCD12345</b> 或 <b>ABCD12346</b><br>主旨包含兩個案號，附件檔名未包含案號資訊</div>
+        <div class="confidence-tag">信心度 42% · 格式不符已知規則</div>
+      </div>
+      <div class="form-card" id="formCard">
+        <div class="form-title">👤 人工確認</div>
+        <div style="display:flex;gap:12px">
+          <div class="form-group" style="flex:1">
+            <div class="form-label">指派人員</div>
+            <div class="form-select" id="staff">— 選擇人員 —</div>
+          </div>
+          <div class="form-group" style="flex:1">
+            <div class="form-label">正確收發碼</div>
+            <div class="form-input" id="codeIn" style="min-height:36px"></div>
+          </div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">檔案重新命名</div>
+          <div class="form-input" id="fileIn" style="min-height:36px;color:#8b8d98">自動產生...</div>
+        </div>
+        <div class="form-group">
+          <div class="form-label">確認原因（供 AI 學習）</div>
+          <textarea class="form-input" id="reason"></textarea>
+        </div>
+        <button class="btn" id="submitBtn">確認送出</button>
+      </div>
+    </div>
+    <div class="col-right">
+      <div class="llm-card">
+        <div class="llm-head">
+          <span>🧠</span>
+          <div class="llm-head-title">LLM 學習迴路</div>
+        </div>
+        <div class="llm-body">
+          <div class="llm-step" id="ll0"><div class="llm-num" id="ln0">1</div><div><div class="llm-label" id="la0">人工確認資料已送出</div><div class="llm-desc">收發碼、檔名、原因已傳送至 LLM</div></div></div>
+          <div class="llm-step" id="ll1"><div class="llm-num" id="ln1">2</div><div><div class="llm-label" id="la1">LLM 分析確認原因</div><div class="llm-desc">比對歷史資料，提取模式規則</div></div></div>
+          <div class="llm-step" id="ll2"><div class="llm-num" id="ln2">3</div><div><div class="llm-label" id="la2">產生新分類規則</div><div class="llm-desc">自動建立規則，下次同類自動處理</div>
+            <div class="rule-card" id="ruleCard">
+              <div class="rule-id">📋 新規則 #R-2026-0047</div>
+              <div class="rule-row"><span class="rule-key">觸發</span><span class="rule-val">主旨含 "Case Update" + 來自 *@bskb-law.com</span></div>
+              <div class="rule-row"><span class="rule-key">動作</span><span class="rule-val">以主旨第一個案號為收發碼</span></div>
+              <div class="rule-row"><span class="rule-key">信心度</span><span class="rule-val green">85% → 自動執行（無需人工）</span></div>
+            </div>
+          </div></div>
+          <div class="llm-step" id="ll3"><div class="llm-num" id="ln3">4</div><div><div class="llm-label" id="la3">規則已套用至系統</div><div class="llm-desc">下次同來源信件將自動處理</div></div></div>
+          <div class="stats-box" id="statsBox">
+            <div class="stats-title">📊 學習成效</div>
+            <div class="stats-text">本月 AI 學習：12 條新規則<br>人工確認減少 34%<br>準確率：94% → 97.5%<br>預估節省：45 分鐘/月</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+function sh(id){document.getElementById(id).classList.add('show')}
+function type(id,txt,spd){const el=document.getElementById(id);el.classList.add('typing');el.style.borderColor='#6366f1';let i=0;const iv=setInterval(()=>{if(i<txt.length){el.textContent=txt.substring(0,++i)}else{clearInterval(iv);el.style.borderColor='#e8e8ec'}},spd)}
+function llmShow(i,st){document.getElementById('ll'+i).classList.add('show');document.getElementById('ln'+i).classList.add(st);document.getElementById('la'+i).classList.add(st)}
+function llmDone(i){document.getElementById('ln'+i).className='llm-num done';document.getElementById('la'+i).className='llm-label done'}
+const T=[
+  [400,()=>sh('alert')],[800,()=>sh('emailCard')],[1200,()=>sh('aiJudge')],[1800,()=>sh('formCard')],
+  [2400,()=>{const s=document.getElementById('staff');s.textContent='陳建志 · 專利師';s.classList.add('filled');s.style.borderColor='#6366f1';setTimeout(()=>s.style.borderColor='#e8e8ec',400)}],
+  [3000,()=>type('codeIn','ABCD12345',80)],
+  [4200,()=>{const c=document.getElementById('codeIn');c.classList.add('done');const f=document.getElementById('fileIn');f.style.color='#1c2024';f.textContent='ABCD12345_OA答辯草稿_v2_2026-03-19.docx'}],
+  [4800,()=>type('reason','此事務所在主旨用 Case Update 開頭，取主旨第一個案號即可。',35)],
+  [7000,()=>{document.getElementById('submitBtn').classList.add('ready');document.getElementById('submitBtn').textContent='✓ 確認送出'}],
+  [7600,()=>{document.getElementById('submitBtn').classList.add('sent');document.getElementById('submitBtn').textContent='✅ 已送出'}],
+  [8000,()=>llmShow(0,'done')],
+  [8600,()=>llmShow(1,'active')],
+  [9800,()=>{llmDone(1);llmShow(2,'active')}],
+  [10600,()=>{llmDone(2);sh('ruleCard')}],
+  [11600,()=>llmShow(3,'done')],
+  [12200,()=>sh('statsBox')],
+];
+T.forEach(([d,fn])=>setTimeout(fn,d));
+</script>
+</body>
+</html>

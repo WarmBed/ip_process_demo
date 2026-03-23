@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
+import { Badge, Button, IconButton } from "@radix-ui/themes";
 import { Search, Plus, FileText, Building2, User, ChevronRight } from "lucide-react";
+import { TextField } from "@radix-ui/themes";
 
 /* ─── mock data ───────────────────────────────────────────── */
 
@@ -74,41 +76,33 @@ const CLIENTS: Client[] = [
 
 /* ─── badge helpers ───────────────────────────────────────── */
 
-const STATUS_STYLE: Record<CaseStatus, { bg: string; color: string; border: string }> = {
-  "進行中": { bg: "#eff6ff", color: "#1d4ed8", border: "#bfdbfe" },
-  "待確認": { bg: "#fffbeb", color: "#b45309", border: "#fde68a" },
-  "已結案": { bg: "#f0fdf4", color: "#166534", border: "#bbf7d0" },
-  "暫停":   { bg: "#fafafa", color: "#6b7280", border: "#e5e7eb" },
+const STATUS_COLOR: Record<CaseStatus, "blue" | "amber" | "green" | "gray"> = {
+  "進行中": "blue",
+  "待確認": "amber",
+  "已結案": "green",
+  "暫停":   "gray",
 };
 
-const TYPE_STYLE: Record<CaseType, { bg: string; color: string }> = {
-  "商標":  { bg: "#fdf4ff", color: "#7e22ce" },
-  "專利":  { bg: "#eff6ff", color: "#1e40af" },
-  "著作權":{ bg: "#fff7ed", color: "#c2410c" },
-  "設計":  { bg: "#f0fdfa", color: "#0f766e" },
+const TYPE_COLOR: Record<CaseType, "purple" | "blue" | "orange" | "teal"> = {
+  "商標":  "purple",
+  "專利":  "blue",
+  "著作權": "orange",
+  "設計":  "teal",
 };
 
 function StatusBadge({ status }: { status: CaseStatus }) {
-  const s = STATUS_STYLE[status];
   return (
-    <span style={{
-      fontSize: 11, fontWeight: 600, padding: "2px 8px", borderRadius: 4,
-      background: s.bg, color: s.color, border: `1px solid ${s.border}`,
-    }}>
+    <Badge variant="soft" color={STATUS_COLOR[status]} size="1">
       {status}
-    </span>
+    </Badge>
   );
 }
 
 function TypeBadge({ type }: { type: CaseType }) {
-  const s = TYPE_STYLE[type];
   return (
-    <span style={{
-      fontSize: 11, fontWeight: 500, padding: "1px 7px", borderRadius: 4,
-      background: s.bg, color: s.color,
-    }}>
+    <Badge variant="soft" color={TYPE_COLOR[type]} size="1">
       {type}
-    </span>
+    </Badge>
   );
 }
 
@@ -138,35 +132,29 @@ export default function ClientsPage() {
 
       {/* ── Left: Client List ────────────────────────────── */}
       <div style={{
-        width: 280, flexShrink: 0, borderRight: "1px solid var(--border)",
-        display: "flex", flexDirection: "column", background: "var(--bg)",
+        width: 280, flexShrink: 0, borderRight: "1px solid var(--gray-6)",
+        display: "flex", flexDirection: "column", background: "var(--color-background)",
       }}>
         {/* header */}
-        <div style={{ padding: "16px 16px 12px", borderBottom: "1px solid var(--border)" }}>
+        <div style={{ padding: "16px 16px 12px", borderBottom: "1px solid var(--gray-6)" }}>
           <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--gray-12)" }}>
               客戶 ({CLIENTS.length})
             </span>
-            <button className="btn-ghost" style={{ padding: "3px 8px", fontSize: 12, display: "flex", alignItems: "center", gap: 4 }}>
+            <Button variant="ghost" color="gray" size="1" style={{ cursor: "pointer" }}>
               <Plus size={12} /> 新增
-            </button>
+            </Button>
           </div>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 6,
-            border: "1px solid var(--border)", borderRadius: 6,
-            padding: "5px 10px", background: "var(--sl2)",
-          }}>
-            <Search size={12} color="var(--fg-subtle)" />
-            <input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="搜尋客戶…"
-              style={{
-                border: "none", outline: "none", fontSize: 12,
-                background: "transparent", color: "var(--fg)", flex: 1,
-              }}
-            />
-          </div>
+          <TextField.Root
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            placeholder="搜尋客戶..."
+            size="1"
+          >
+            <TextField.Slot>
+              <Search size={12} color="var(--gray-9)" />
+            </TextField.Slot>
+          </TextField.Root>
         </div>
 
         {/* list */}
@@ -180,44 +168,44 @@ export default function ClientsPage() {
                 onClick={() => setSelected(c)}
                 style={{
                   padding: "10px 16px",
-                  borderBottom: "1px solid var(--border)",
+                  borderBottom: "1px solid var(--gray-6)",
                   cursor: "pointer",
-                  background: isActive ? "#fff7ed" : "transparent",
-                  borderLeft: isActive ? "3px solid #f97316" : "3px solid transparent",
+                  background: isActive ? "var(--green-2)" : "transparent",
+                  borderLeft: isActive ? "3px solid var(--green-9)" : "3px solid transparent",
                   display: "flex", alignItems: "center", gap: 10,
                   transition: "background 0.12s, border-color 0.12s",
                 }}
-                onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "var(--sl2)"; }}
+                onMouseEnter={(e) => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "var(--gray-2)"; }}
                 onMouseLeave={(e) => { if (!isActive) (e.currentTarget as HTMLDivElement).style.background = "transparent"; }}
               >
                 {/* avatar */}
                 <div style={{
                   width: 34, height: 34, borderRadius: c.kind === "company" ? 8 : "50%",
-                  background: isActive ? "#f97316" : "var(--sl4)",
+                  background: isActive ? "var(--green-9)" : "var(--gray-4)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                   flexShrink: 0,
                   transition: "background 0.12s",
                 }}>
                   {c.kind === "company"
-                    ? <Building2 size={15} color={isActive ? "#fff" : "var(--fg-muted)"} />
-                    : <User size={15} color={isActive ? "#fff" : "var(--fg-muted)"} />
+                    ? <Building2 size={15} color={isActive ? "var(--color-background)" : "var(--gray-11)"} />
+                    : <User size={15} color={isActive ? "var(--color-background)" : "var(--gray-11)"} />
                   }
                 </div>
 
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontSize: 13, fontWeight: isActive ? 600 : 500, color: isActive ? "#c2410c" : "var(--fg)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                  <div style={{ fontSize: 13, fontWeight: isActive ? 600 : 500, color: isActive ? "var(--green-11)" : "var(--gray-12)", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {c.name}
                   </div>
-                  <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: 1 }}>
+                  <div style={{ fontSize: 11, color: "var(--gray-9)", marginTop: 1 }}>
                     {c.industry} · {c.cases.length} 件
                     {ongoing > 0 && (
-                      <span style={{ marginLeft: 4, color: "#1d4ed8", fontWeight: 600 }}>
+                      <span style={{ marginLeft: 4, color: "var(--blue-9)", fontWeight: 600 }}>
                         ({ongoing} 進行中)
                       </span>
                     )}
                   </div>
                 </div>
-                <ChevronRight size={12} color="var(--fg-subtle)" />
+                <ChevronRight size={12} color="var(--gray-9)" />
               </div>
             );
           })}
@@ -230,25 +218,25 @@ export default function ClientsPage() {
         {/* client header */}
         <div style={{
           padding: "20px 24px 16px",
-          borderBottom: "1px solid var(--border)",
-          background: "var(--bg)",
+          borderBottom: "1px solid var(--gray-6)",
+          background: "var(--color-background)",
         }}>
           <div style={{ display: "flex", alignItems: "flex-start", justifyContent: "space-between" }}>
             <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
               <div style={{
                 width: 44, height: 44, borderRadius: selected.kind === "company" ? 10 : "50%",
-                background: "var(--sl4)", display: "flex", alignItems: "center", justifyContent: "center",
+                background: "var(--gray-4)", display: "flex", alignItems: "center", justifyContent: "center",
               }}>
                 {selected.kind === "company"
-                  ? <Building2 size={20} color="var(--fg-muted)" />
-                  : <User size={20} color="var(--fg-muted)" />
+                  ? <Building2 size={20} color="var(--gray-11)" />
+                  : <User size={20} color="var(--gray-11)" />
                 }
               </div>
               <div>
-                <h2 style={{ fontSize: 16, fontWeight: 600, color: "var(--fg)", margin: 0 }}>
+                <h2 style={{ fontSize: 16, fontWeight: 600, color: "var(--gray-12)", margin: 0 }}>
                   {selected.name}
                 </h2>
-                <div style={{ fontSize: 12, color: "var(--fg-subtle)", marginTop: 3, display: "flex", gap: 12 }}>
+                <div style={{ fontSize: 12, color: "var(--gray-9)", marginTop: 3, display: "flex", gap: 12 }}>
                   <span>聯絡人：{selected.contact}</span>
                   <span>{selected.email}</span>
                   <span>{selected.industry}</span>
@@ -259,17 +247,17 @@ export default function ClientsPage() {
             {/* stats */}
             <div style={{ display: "flex", gap: 8 }}>
               {[
-                { label: "總案件", value: selected.cases.length, color: "var(--fg)" },
-                { label: "進行中", value: activeCases, color: "#1d4ed8" },
-                { label: "已結案", value: selected.cases.filter((c) => c.status === "已結案").length, color: "#166534" },
+                { label: "總案件", value: selected.cases.length, color: "var(--gray-12)" },
+                { label: "進行中", value: activeCases, color: "var(--blue-9)" },
+                { label: "已結案", value: selected.cases.filter((c) => c.status === "已結案").length, color: "var(--green-9)" },
               ].map((s) => (
                 <div key={s.label} style={{
                   textAlign: "center", padding: "6px 14px",
-                  background: "var(--sl2)", borderRadius: 8,
-                  border: "1px solid var(--border)",
+                  background: "var(--gray-2)", borderRadius: 8,
+                  border: "1px solid var(--gray-6)",
                 }}>
                   <div style={{ fontSize: 20, fontWeight: 700, color: s.color, lineHeight: 1 }}>{s.value}</div>
-                  <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: 3 }}>{s.label}</div>
+                  <div style={{ fontSize: 11, color: "var(--gray-9)", marginTop: 3 }}>{s.label}</div>
                 </div>
               ))}
             </div>
@@ -279,39 +267,37 @@ export default function ClientsPage() {
         {/* cases toolbar */}
         <div style={{
           padding: "12px 24px",
-          borderBottom: "1px solid var(--border)",
+          borderBottom: "1px solid var(--gray-6)",
           display: "flex", alignItems: "center", justifyContent: "space-between",
-          background: "var(--bg)",
+          background: "var(--color-background)",
         }}>
-          <div style={{
-            display: "flex", alignItems: "center", gap: 6,
-            border: "1px solid var(--border)", borderRadius: 6,
-            padding: "5px 10px", background: "var(--sl2)", width: 240,
-          }}>
-            <Search size={12} color="var(--fg-subtle)" />
-            <input
-              value={caseSearch}
-              onChange={(e) => setCaseSearch(e.target.value)}
-              placeholder="搜尋案號、案名…"
-              style={{ border: "none", outline: "none", fontSize: 12, background: "transparent", color: "var(--fg)", flex: 1 }}
-            />
-          </div>
-          <button className="btn-primary" style={{ fontSize: 12, padding: "5px 12px", gap: 5 }}>
+          <TextField.Root
+            value={caseSearch}
+            onChange={(e) => setCaseSearch(e.target.value)}
+            placeholder="搜尋案號、案名..."
+            size="1"
+            style={{ width: 240 }}
+          >
+            <TextField.Slot>
+              <Search size={12} color="var(--gray-9)" />
+            </TextField.Slot>
+          </TextField.Root>
+          <Button variant="solid" color="green" size="1" style={{ cursor: "pointer" }}>
             <Plus size={12} /> 新增案件
-          </button>
+          </Button>
         </div>
 
         {/* cases table */}
         <div style={{ flex: 1, overflowY: "auto", padding: "16px 24px" }}>
-          <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+          <div style={{ border: "1px solid var(--gray-6)", borderRadius: 8, overflow: "hidden" }}>
 
             {/* table header */}
             <div style={{
               display: "grid",
               gridTemplateColumns: "120px 1fr 80px 90px 80px 100px 100px",
               padding: "8px 16px", gap: 12,
-              background: "var(--sl2)", borderBottom: "1px solid var(--border)",
-              fontSize: 11, fontWeight: 600, color: "var(--fg-subtle)",
+              background: "var(--gray-2)", borderBottom: "1px solid var(--gray-6)",
+              fontSize: 11, fontWeight: 600, color: "var(--gray-9)",
               letterSpacing: "0.04em", textTransform: "uppercase",
             }}>
               <div>案號</div>
@@ -324,7 +310,7 @@ export default function ClientsPage() {
             </div>
 
             {filteredCases.length === 0 ? (
-              <div style={{ padding: "40px 0", textAlign: "center", color: "var(--fg-subtle)", fontSize: 13 }}>
+              <div style={{ padding: "40px 0", textAlign: "center", color: "var(--gray-9)", fontSize: 13 }}>
                 沒有符合的案件
               </div>
             ) : (
@@ -336,21 +322,21 @@ export default function ClientsPage() {
                     display: "grid",
                     gridTemplateColumns: "120px 1fr 80px 90px 80px 100px 100px",
                     padding: "11px 16px", gap: 12,
-                    borderBottom: i < filteredCases.length - 1 ? "1px solid var(--border)" : "none",
+                    borderBottom: i < filteredCases.length - 1 ? "1px solid var(--gray-6)" : "none",
                     alignItems: "center",
-                    background: "var(--bg)",
+                    background: "var(--color-background)",
                   }}
                 >
                   {/* case id */}
                   <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                    <FileText size={13} color="var(--fg-muted)" />
-                    <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, color: "var(--fg)", fontWeight: 500 }}>
+                    <FileText size={13} color="var(--gray-11)" />
+                    <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 12, color: "var(--gray-12)", fontWeight: 500 }}>
                       {c.id}
                     </span>
                   </div>
 
                   {/* title */}
-                  <div style={{ fontSize: 13, color: "var(--fg)" }}>{c.title}</div>
+                  <div style={{ fontSize: 13, color: "var(--gray-12)" }}>{c.title}</div>
 
                   {/* type */}
                   <div><TypeBadge type={c.type} /></div>
@@ -359,13 +345,13 @@ export default function ClientsPage() {
                   <div><StatusBadge status={c.status} /></div>
 
                   {/* attorney */}
-                  <div style={{ fontSize: 12, color: "var(--fg-muted)" }}>{c.attorney}</div>
+                  <div style={{ fontSize: 12, color: "var(--gray-11)" }}>{c.attorney}</div>
 
                   {/* filed */}
-                  <div style={{ fontSize: 12, color: "var(--fg-subtle)" }}>{c.filed}</div>
+                  <div style={{ fontSize: 12, color: "var(--gray-9)" }}>{c.filed}</div>
 
                   {/* deadline */}
-                  <div style={{ fontSize: 12, color: c.deadline ? "#b45309" : "var(--fg-subtle)" }}>
+                  <div style={{ fontSize: 12, color: c.deadline ? "var(--amber-9)" : "var(--gray-9)" }}>
                     {c.deadline ?? "—"}
                   </div>
                 </div>

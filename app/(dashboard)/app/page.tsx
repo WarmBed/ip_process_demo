@@ -7,6 +7,7 @@ import {
   Mail, AlertCircle, CheckCircle, ChevronRight, HelpCircle,
   Clock, CheckSquare, X, Bot, CheckCircle2, Circle, ExternalLink, User, Scale, ArrowRight,
 } from "lucide-react";
+import { Badge, Button, IconButton, Separator } from "@radix-ui/themes";
 import type { ApiResponse, EmailListItem } from "@/lib/types";
 import { MOCK_STATS } from "@/lib/mock-data";
 import { MOCK_TODOS, DIRECTION_CONFIG } from "@/lib/mock-todo";
@@ -19,7 +20,7 @@ const PENDING_REASONS: Record<string, { reason: string; detail: string; tag: str
     reason: "方向碼不確定",
     detail: "TA 與 TC 特徵重疊，信心度 94%，請確認是委託發出還是客戶指示",
     tag: "信心不足",
-    tagColor: "#d97706",
+    tagColor: "var(--orange-11)",
   },
 };
 
@@ -27,12 +28,12 @@ const DEFAULT_REASON = {
   reason: "需人工確認",
   detail: "AI 無法完全確定分類，請人工審核後確認",
   tag: "待審核",
-  tagColor: "#6b7280",
+  tagColor: "var(--gray-9)",
 };
 
 const codeColor: Record<string, string> = {
-  FA: "#2563eb", FC: "#7c3aed", TA: "#059669", TC: "#d97706",
-  FG: "#dc2626", TG: "#9ca3af", FX: "#6b7280",
+  FA: "var(--blue-9)", FC: "var(--violet-9)", TA: "var(--green-9)", TC: "var(--orange-9)",
+  FG: "var(--red-9)", TG: "var(--gray-8)", FX: "var(--gray-9)",
 };
 
 function StatCard({ label, value, sub, accent = false, last = false }: {
@@ -41,12 +42,12 @@ function StatCard({ label, value, sub, accent = false, last = false }: {
   return (
     <div style={{
       flex: 1, padding: "16px 24px",
-      borderRight: last ? "none" : "1px solid var(--border)",
-      background: accent ? "#fffbeb" : "transparent",
+      borderRight: last ? "none" : "1px solid var(--gray-5)",
+      background: accent ? "var(--orange-2)" : "transparent",
     }}>
-      <div style={{ fontSize: 12, color: accent ? "#92400e" : "var(--fg-subtle)", fontWeight: 500, marginBottom: 6 }}>{label}</div>
-      <div style={{ fontSize: 16, fontWeight: 700, color: accent ? "#92400e" : "var(--fg)", letterSpacing: "-0.01em", lineHeight: 1.2 }}>{value}</div>
-      {sub && <div style={{ fontSize: 12, color: accent ? "#b45309" : "var(--fg-subtle)", marginTop: 4 }}>{sub}</div>}
+      <div style={{ fontSize: 12, color: accent ? "var(--orange-11)" : "var(--gray-9)", fontWeight: 500, marginBottom: 6 }}>{label}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: accent ? "var(--orange-11)" : "var(--gray-12)", letterSpacing: "-0.01em", lineHeight: 1.2 }}>{value}</div>
+      {sub && <div style={{ fontSize: 12, color: accent ? "var(--orange-10)" : "var(--gray-9)", marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -82,27 +83,27 @@ function TodoDetailPanel({ todo, onClose, onDone, isDone, onNavigate }: {
   const days   = daysUntil(todo.deadline);
   const dir    = DIRECTION_CONFIG[todo.direction];
   const isUrg  = todo.priority === "urgent";
-  const deadlineColor = days === null ? "var(--fg-subtle)" : days <= 7 ? "#dc2626" : days <= 21 ? "#d97706" : "var(--fg-subtle)";
+  const deadlineColor = days === null ? "var(--gray-9)" : days <= 7 ? "var(--red-9)" : days <= 21 ? "var(--orange-9)" : "var(--gray-9)";
 
   return (
     <div style={{ display: "flex", flexDirection: "column", height: "100%", overflow: "hidden" }}>
       {/* Header */}
-      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--border)", background: "var(--sl2)", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
+      <div style={{ padding: "12px 16px", borderBottom: "1px solid var(--gray-5)", background: "var(--gray-2)", display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
         <div style={{ flex: 1, minWidth: 0 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-            <span style={{ fontSize: 12, fontWeight: 700, fontFamily: "ui-monospace, monospace", color: "var(--fg)", background: "var(--sl3)", padding: "2px 7px", borderRadius: 4, border: "1px solid var(--border)" }}>
+            <Badge variant="outline" color="gray" style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, fontSize: 12 }}>
               {todo.case_number}
-            </span>
-            <span style={{ fontSize: 11, fontWeight: 600, color: dir.color, background: dir.bg, padding: "1px 6px", borderRadius: 4, display: "flex", alignItems: "center", gap: 3 }}>
+            </Badge>
+            <Badge variant="soft" style={{ color: dir.color, fontSize: 11, display: "flex", alignItems: "center", gap: 3 }}>
               {DIR_ICON[todo.direction]}{dir.label}
-            </span>
-            {isUrg && <span style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", background: "#fef2f2", padding: "1px 6px", borderRadius: 4, border: "1px solid #fecaca" }}>急</span>}
+            </Badge>
+            {isUrg && <Badge variant="soft" color="red" style={{ fontSize: 10, fontWeight: 700 }}>急</Badge>}
           </div>
-          <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: 3 }}>{todo.client}</div>
+          <div style={{ fontSize: 11, color: "var(--gray-9)", marginTop: 3 }}>{todo.client}</div>
         </div>
-        <button onClick={onClose} className="btn-ghost" style={{ padding: "4px", flexShrink: 0 }}>
+        <IconButton variant="ghost" color="gray" size="1" onClick={onClose}>
           <X size={14} />
-        </button>
+        </IconButton>
       </div>
 
       {/* Scrollable body */}
@@ -110,28 +111,28 @@ function TodoDetailPanel({ todo, onClose, onDone, isDone, onNavigate }: {
 
         {/* Action */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 5 }}>下一步動作</div>
-          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)", lineHeight: 1.5 }}>{todo.action}</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 5 }}>下一步動作</div>
+          <div style={{ fontSize: 14, fontWeight: 600, color: "var(--gray-12)", lineHeight: 1.5 }}>{todo.action}</div>
         </div>
 
         {/* Detail */}
         {todo.detail && (
-          <div style={{ marginBottom: 16, padding: "12px 14px", background: "var(--sl2)", borderRadius: 8, border: "1px solid var(--border)" }}>
-            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>狀況說明</div>
-            <p style={{ fontSize: 13, color: "var(--fg)", lineHeight: 1.7, margin: 0 }}>{todo.detail}</p>
+          <div style={{ marginBottom: 16, padding: "12px 14px", background: "var(--gray-2)", borderRadius: 4, border: "1px solid var(--gray-5)" }}>
+            <div style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>狀況說明</div>
+            <p style={{ fontSize: 13, color: "var(--gray-12)", lineHeight: 1.7, margin: 0 }}>{todo.detail}</p>
           </div>
         )}
 
         {/* AI suggestion */}
         {todo.ai_suggestion && (
-          <div style={{ marginBottom: 16, padding: "10px 12px", background: "#eef2ff", borderRadius: 8, borderLeft: "3px solid #6366f1", display: "flex", gap: 8 }}>
-            <Bot size={14} color="#6366f1" style={{ flexShrink: 0, marginTop: 1 }} />
-            <p style={{ fontSize: 12, color: "#3730a3", margin: 0, lineHeight: 1.6 }}>{todo.ai_suggestion}</p>
+          <div style={{ marginBottom: 16, padding: "10px 12px", background: "var(--green-2)", borderRadius: 4, borderLeft: "3px solid var(--green-9)", display: "flex", gap: 8 }}>
+            <Bot size={14} color="var(--green-9)" style={{ flexShrink: 0, marginTop: 1 }} />
+            <p style={{ fontSize: 12, color: "var(--green-11)", margin: 0, lineHeight: 1.6 }}>{todo.ai_suggestion}</p>
           </div>
         )}
 
         {/* Meta */}
-        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16, padding: "12px 14px", background: "var(--sl1)", borderRadius: 8, border: "1px solid var(--border)" }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: 8, marginBottom: 16, padding: "12px 14px", background: "var(--gray-2)", borderRadius: 4, border: "1px solid var(--gray-5)" }}>
           {[
             { label: "誰要動",  value: <span style={{ display: "inline-flex", alignItems: "center", gap: 4 }}>{WHO_ICON[todo.who]}{todo.who}</span> },
             { label: "動作類型", value: <span style={{ color: dir.color, display: "inline-flex", alignItems: "center", gap: 3 }}>{DIR_ICON[todo.direction]}{dir.label}</span> },
@@ -142,11 +143,11 @@ function TodoDetailPanel({ todo, onClose, onDone, isDone, onNavigate }: {
                 {days !== null && <span style={{ fontSize: 10 }}>（{days <= 0 ? `逾期 ${Math.abs(days)} 天` : `${days} 天後`}）</span>}
               </span>
             ) : "—" },
-            { label: "優先級",  value: todo.priority === "urgent" ? <span style={{ color: "#dc2626", fontWeight: 600 }}>急</span> : todo.priority === "normal" ? "一般" : "低" },
+            { label: "優先級",  value: todo.priority === "urgent" ? <span style={{ color: "var(--red-9)", fontWeight: 600 }}>急</span> : todo.priority === "normal" ? "一般" : "低" },
           ].map(({ label, value }) => (
             <div key={label} style={{ display: "flex", gap: 10, fontSize: 12 }}>
-              <span style={{ color: "var(--fg-subtle)", minWidth: 56, flexShrink: 0 }}>{label}</span>
-              <span style={{ color: "var(--fg)" }}>{value}</span>
+              <span style={{ color: "var(--gray-9)", minWidth: 56, flexShrink: 0 }}>{label}</span>
+              <span style={{ color: "var(--gray-12)" }}>{value}</span>
             </div>
           ))}
         </div>
@@ -155,47 +156,46 @@ function TodoDetailPanel({ todo, onClose, onDone, isDone, onNavigate }: {
         {todo.tags.length > 0 && (
           <div style={{ marginBottom: 16, display: "flex", gap: 5, flexWrap: "wrap" }}>
             {todo.tags.map(tag => (
-              <span key={tag} style={{ fontSize: 11, color: "var(--fg-subtle)", background: "var(--sl3)", padding: "2px 7px", borderRadius: 4, border: "1px solid var(--border)" }}>{tag}</span>
+              <Badge key={tag} variant="soft" color="gray" style={{ fontSize: 11 }}>{tag}</Badge>
             ))}
           </div>
         )}
 
         {/* Source email */}
         <div style={{ marginBottom: 16 }}>
-          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>來源信件</div>
+          <div style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>來源信件</div>
           <button
             onClick={() => onNavigate(`/app/emails/${todo.source_email_id}`)}
-            style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "9px 12px", border: "1px solid var(--border)", borderRadius: 7, background: "var(--bg)", cursor: "pointer", textAlign: "left" }}
+            style={{ display: "flex", alignItems: "center", gap: 6, width: "100%", padding: "9px 12px", border: "1px solid var(--gray-5)", borderRadius: 4, background: "var(--color-background)", cursor: "pointer", textAlign: "left" }}
           >
-            <Mail size={13} color="var(--fg-muted)" style={{ flexShrink: 0 }} />
+            <Mail size={13} color="var(--gray-8)" style={{ flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{todo.source_subject}</div>
-              <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: 1 }}>
+              <div style={{ fontSize: 12, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{todo.source_subject}</div>
+              <div style={{ fontSize: 11, color: "var(--gray-9)", marginTop: 1 }}>
                 {new Date(todo.source_date).toLocaleDateString("zh-TW", { month: "2-digit", day: "2-digit" })}
               </div>
             </div>
-            <ExternalLink size={11} color="var(--fg-subtle)" style={{ flexShrink: 0 }} />
+            <ExternalLink size={11} color="var(--gray-8)" style={{ flexShrink: 0 }} />
           </button>
         </div>
 
         {/* Full todo link */}
-        <Link href={`/app/todo`} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--fg-muted)", textDecoration: "none" }}>
+        <Link href={`/app/todo`} style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--gray-8)", textDecoration: "none" }}>
           <CheckSquare size={12} />在待辦清單中查看 <ChevronRight size={11} />
         </Link>
       </div>
 
       {/* Footer action */}
-      <div style={{ padding: "12px 16px", borderTop: "1px solid var(--border)", flexShrink: 0 }}>
-        <button
+      <div style={{ padding: "12px 16px", borderTop: "1px solid var(--gray-5)", flexShrink: 0 }}>
+        <Button
           onClick={onDone}
-          style={{
-            width: "100%", padding: "9px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 13, fontWeight: 600,
-            background: isDone ? "var(--sl3)" : "#166534", color: isDone ? "var(--fg-muted)" : "#fff",
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-          }}
+          variant={isDone ? "outline" : "solid"}
+          color={isDone ? "gray" : "green"}
+          style={{ width: "100%", cursor: "pointer" }}
+          size="2"
         >
           {isDone ? <><Circle size={14} />取消完成</> : <><CheckCircle2 size={14} />標記完成</>}
-        </button>
+        </Button>
       </div>
     </div>
   );
@@ -270,264 +270,143 @@ export default function AppOverviewPage() {
     <div style={{ display: "flex", height: "100%", overflow: "hidden" }}>
 
       {/* ── Main content ── */}
-      <div style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
+      <div className="page-pad" style={{ flex: 1, overflowY: "auto", padding: "24px 28px" }}>
         <div style={{ maxWidth: 900 }}>
 
           {/* Stat cards */}
-          <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 10, marginBottom: 24, overflow: "hidden", background: "var(--bg)" }}>
-            <StatCard label="進行中案件" value={<span style={{ color: "#1d4ed8" }}>{activeCases} 件</span>} sub={`共 ${MOCK_CASES.length} 件`} />
+          <div className="stat-row" style={{ display: "flex", border: "1px solid var(--gray-5)", borderRadius: 4, marginBottom: 24, overflow: "hidden", background: "var(--color-background)" }}>
+            <StatCard label="進行中案件" value={<span style={{ color: "var(--blue-9)" }}>{activeCases} 件</span>} sub={`共 ${MOCK_CASES.length} 件`} />
             <StatCard
               label="OA 待答辯"
-              value={<span style={{ color: oaCases > 0 ? "#d97706" : "#16a34a" }}>{oaCases} 件</span>}
+              value={<span style={{ color: oaCases > 0 ? "var(--orange-9)" : "var(--green-9)" }}>{oaCases} 件</span>}
               sub={oaCases > 0 ? "需提交答辯" : "無待辦答辯"}
               accent={oaCases > 0}
             />
             <StatCard
               label="30 天內期限"
-              value={<span style={{ color: urgentDls.length > 0 ? "#dc2626" : "#16a34a" }}>{urgentDls.length} 個</span>}
+              value={<span style={{ color: urgentDls.length > 0 ? "var(--red-9)" : "var(--green-9)" }}>{urgentDls.length} 個</span>}
               sub={urgentDls.length > 0 ? "請注意截止日" : "無緊急期限"}
               accent={urgentDls.length > 0}
             />
-            <StatCard label="今日信件" value={`${todayMsgs.length} 封`} sub={pending.length > 0 ? `${pending.length} 封待確認` : "全部已歸類 ✓"} last />
+            <StatCard label="今日信件" value={`${todayMsgs.length} 封`} sub={pending.length > 0 ? `${pending.length} 封待確認` : "全部已歸類"} last />
           </div>
 
-          {/* Upcoming deadlines strip */}
-          {urgentDls.length > 0 && (
-            <div style={{ marginBottom: 20, border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", background: "var(--bg)" }}>
-              <div style={{ padding: "9px 16px", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--sl2)" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <Clock size={12} color="var(--fg-muted)" />
-                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg)" }}>近期截止期限</span>
-                  <span style={{ fontSize: 10, fontWeight: 700, color: urgentDls.some(d => Math.ceil((new Date(d.due_date).getTime()-Date.now())/86400000) <= 7) ? "#dc2626" : "#d97706", background: urgentDls.some(d => Math.ceil((new Date(d.due_date).getTime()-Date.now())/86400000) <= 7) ? "#fef2f2" : "#fffbeb", padding: "0 5px", borderRadius: 8, border: `1px solid ${urgentDls.some(d => Math.ceil((new Date(d.due_date).getTime()-Date.now())/86400000) <= 7) ? "#fecaca" : "#fde68a"}` }}>
-                    {urgentDls.length}
-                  </span>
+          {/* ── Two-domain layout ── */}
+          <div className="two-domain" style={{ display: "grid", gridTemplateColumns: "1fr 360px", gap: 20, alignItems: "start" }}>
+
+            {/* ─── LEFT: 案件追蹤 ─── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+              {/* Domain label */}
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <div style={{ width: 3, height: 14, borderRadius: 2, background: "var(--green-9)", flexShrink: 0 }} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: "var(--green-9)", textTransform: "uppercase", letterSpacing: "0.07em" }}>案件追蹤</span>
+              </div>
+
+              {/* Deadline docket */}
+              <div style={{ border: "1px solid var(--gray-5)", borderRadius: 4, overflow: "hidden" }}>
+                <div style={{ padding: "9px 14px", borderBottom: "1px solid var(--gray-5)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--green-2)" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                    <Clock size={12} color="var(--green-9)" />
+                    <span style={{ fontSize: 12, fontWeight: 600, color: "var(--green-11)" }}>截止期限</span>
+                    {urgentDls.filter(d => Math.ceil((new Date(d.due_date).getTime()-Date.now())/86400000) <= 7).length > 0 && (
+                      <Badge variant="soft" color="red" size="1" style={{ fontSize: 10, fontWeight: 700 }}>
+                        {urgentDls.filter(d => Math.ceil((new Date(d.due_date).getTime()-Date.now())/86400000) <= 7).length} 緊急
+                      </Badge>
+                    )}
+                  </div>
+                  <Link href="/app/deadlines" style={{ fontSize: 11, color: "var(--green-9)", textDecoration: "none", display: "flex", alignItems: "center", gap: 2 }}>
+                    全部 {urgentDls.length} 個 <ChevronRight size={10} />
+                  </Link>
                 </div>
-                <Link href="/app/deadlines" style={{ fontSize: 12, color: "var(--fg-muted)", textDecoration: "none", display: "flex", alignItems: "center", gap: 2 }}>
-                  全部 <ChevronRight size={11} />
-                </Link>
-              </div>
-              <div style={{ display: "flex", flexDirection: "column" }}>
-                {urgentDls.slice(0, 4).map((d, i, arr) => {
-                  const days = Math.ceil((new Date(d.due_date).getTime() - Date.now()) / 86400000);
-                  const isRed = days <= 7;
-                  return (
-                    <div key={d.id} style={{
-                      display: "flex", alignItems: "center", gap: 12,
-                      padding: "9px 16px",
-                      borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none",
-                      borderLeft: `3px solid ${isRed ? "#dc2626" : "#d97706"}`,
-                      background: isRed ? "#fef2f2" : "transparent",
-                    }}>
-                      <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 11, fontWeight: 600, color: "var(--fg)", minWidth: 140, flexShrink: 0 }}>{d.case_number}</span>
-                      <span style={{ fontSize: 12, color: "var(--fg)", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.description}</span>
-                      <span style={{ fontSize: 11, color: "var(--fg-subtle)", flexShrink: 0 }}>{d.client_name}</span>
-                      <span style={{ fontSize: 11, fontWeight: 600, color: isRed ? "#dc2626" : "#d97706", flexShrink: 0, minWidth: 56, textAlign: "right" }}>
-                        {days <= 0 ? `逾期${Math.abs(days)}d` : `${days} 天`}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          )}
-
-          {/* Todo summary bar */}
-          {(() => {
-            const urgentTodos = MOCK_TODOS.filter(t => !doneTodos.has(t.id) && t.status !== "done" && t.priority === "urgent");
-            const totalPending = MOCK_TODOS.filter(t => !doneTodos.has(t.id) && t.status !== "done").length;
-            const nextDeadline = MOCK_TODOS
-              .filter(t => !doneTodos.has(t.id) && t.status !== "done" && t.deadline)
-              .sort((a, b) => new Date(a.deadline!).getTime() - new Date(b.deadline!).getTime())[0];
-            const days = nextDeadline ? Math.ceil((new Date(nextDeadline.deadline!).getTime() - Date.now()) / 86400000) : null;
-            return (
-              <div style={{ display: "flex", alignItems: "center", gap: 0, marginBottom: 20, border: "1px solid var(--border)", borderRadius: 8, background: "var(--bg)", overflow: "hidden" }}>
-                <div style={{ padding: "9px 18px", borderRight: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 6 }}>
-                  <CheckSquare size={13} color="var(--fg-subtle)" />
-                  <span style={{ fontSize: 12, color: "var(--fg-subtle)" }}>案件待辦</span>
-                  <span style={{ fontSize: 13, fontWeight: 700, color: "var(--fg)", marginLeft: 2 }}>{totalPending} 件</span>
-                </div>
-                {urgentTodos.length > 0 && (
-                  <div style={{ padding: "9px 18px", borderRight: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 5 }}>
-                    <span style={{ fontSize: 13, fontWeight: 700, color: "#dc2626" }}>{urgentTodos.length} 件急</span>
-                  </div>
-                )}
-                {days !== null && (
-                  <div style={{ padding: "9px 18px", borderRight: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 5 }}>
-                    <Clock size={12} color={days <= 7 ? "#dc2626" : "#d97706"} />
-                    <span style={{ fontSize: 12, color: days <= 7 ? "#dc2626" : "#d97706" }}>
-                      最近截止 {days <= 0 ? "已逾期" : `${days} 天後`}
-                    </span>
-                  </div>
-                )}
-              </div>
-            );
-          })()}
-
-          {/* Pending section */}
-          {pending.length > 0 && (
-            <div style={{ marginBottom: 20, border: "1px solid #fde68a", borderRadius: 8, overflow: "hidden", background: "#fffbeb" }}>
-              <div style={{ padding: "10px 16px", borderBottom: "1px solid #fde68a", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                  <AlertCircle size={13} color="#d97706" />
-                  <span style={{ fontSize: 13, fontWeight: 600, color: "#92400e" }}>{pending.length} 封需要人工確認</span>
-                </div>
-                <button onClick={() => router.push("/app/emails?status=pending")}
-                  style={{ fontSize: 12, color: "#b45309", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "center", gap: 3 }}>
-                  前往確認全部 <ChevronRight size={12} />
-                </button>
-              </div>
-              {pending.map((e, i) => {
-                const r = PENDING_REASONS[e.id] ?? DEFAULT_REASON;
-                const isSelected = selectedId === e.id;
-                return (
-                  <div key={e.id}
-                    onClick={() => selectEmail(isSelected ? null : e.id)}
-                    style={{
-                      padding: "12px 16px",
-                      borderBottom: i < pending.length - 1 ? "1px solid #fde68a" : "none",
-                      cursor: "pointer", transition: "background 0.1s",
-                      background: isSelected ? "#fef9c3" : "transparent",
-                    }}
-                    onMouseEnter={el => { if (!isSelected) el.currentTarget.style.background = "#fef9c3"; }}
-                    onMouseLeave={el => { if (!isSelected) el.currentTarget.style.background = "transparent"; }}
-                  >
-                    <div style={{ display: "flex", alignItems: "flex-start", gap: 10 }}>
-                      <span style={{ fontSize: 10, fontWeight: 700, padding: "2px 6px", borderRadius: 4, flexShrink: 0, marginTop: 1, color: codeColor[e.direction_code ?? ""] ?? "#6b7280", background: `${codeColor[e.direction_code ?? ""] ?? "#6b7280"}18`, border: `1px solid ${codeColor[e.direction_code ?? ""] ?? "#6b7280"}30` }}>
-                        {e.direction_code ?? "?"}
-                      </span>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 13, fontWeight: 500, color: "#1c1917", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.subject}</div>
-                        <div style={{ fontSize: 11, color: "#78716c", marginTop: 2 }}>
-                          {e.sender_name} · {new Date(e.received_at).toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                        </div>
-                        <div style={{ display: "flex", alignItems: "flex-start", gap: 6, marginTop: 6 }}>
-                          <HelpCircle size={11} color={r.tagColor} style={{ flexShrink: 0, marginTop: 1 }} />
-                          <div>
-                            <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 5px", borderRadius: 3, marginRight: 6, color: r.tagColor, background: `${r.tagColor}18` }}>{r.tag}</span>
-                            <span style={{ fontSize: 11, color: "#78716c" }}>{r.detail}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <ChevronRight size={13} color={isSelected ? "#d97706" : "#a8a29e"} style={{ flexShrink: 0, marginTop: 2, transform: isSelected ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-          )}
-
-          {/* Two columns: recent emails + urgent todos */}
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 340px", gap: 16 }}>
-
-            {/* Recent emails */}
-            <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-              <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--sl2)" }}>
-                <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>最近信件</span>
-                <button onClick={() => router.push("/app/emails")} style={{ fontSize: 12, color: "var(--fg-muted)", background: "none", border: "none", cursor: "pointer" }}>查看全部 →</button>
-              </div>
-              {recentEmails.map((e, i) => {
-                const isSelected = selectedId === e.id;
-                return (
-                  <div key={e.id}
-                    onClick={() => selectEmail(isSelected ? null : e.id)}
-                    style={{
-                      display: "flex", alignItems: "center", gap: 10, padding: "10px 16px",
-                      borderBottom: i < recentEmails.length - 1 ? "1px solid var(--border)" : "none",
-                      cursor: "pointer", transition: "background 0.1s",
-                      background: isSelected ? "var(--sl3)" : "transparent",
-                    }}
-                    onMouseEnter={el => { if (!isSelected) el.currentTarget.style.background = "var(--sl2)"; }}
-                    onMouseLeave={el => { if (!isSelected) el.currentTarget.style.background = "transparent"; }}
-                  >
-                    <span style={{ fontSize: 9, fontWeight: 700, padding: "1px 5px", borderRadius: 3, flexShrink: 0, color: codeColor[e.direction_code ?? ""] ?? "#6b7280", background: `${codeColor[e.direction_code ?? ""] ?? "#6b7280"}15` }}>
-                      {e.direction_code ?? "?"}
-                    </span>
-                    <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 13, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", fontWeight: isSelected ? 600 : 400 }}>{e.subject}</div>
-                      <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: 1 }}>
-                        {e.sender_name} · {new Date(e.received_at).toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
-                      </div>
-                    </div>
-                    {e.status === "pending"   && <AlertCircle  size={13} color="#d97706" style={{ flexShrink: 0 }} />}
-                    {e.status === "confirmed" && <CheckCircle  size={13} color="var(--green)" style={{ flexShrink: 0 }} />}
-                  </div>
-                );
-              })}
-            </div>
-
-            {/* Right: urgent todos */}
-            {(() => {
-              const urgentTodos = MOCK_TODOS
-                .filter(t => !doneTodos.has(t.id) && t.status !== "done" && t.priority === "urgent")
-                .slice(0, 4);
-              const normalTodos = MOCK_TODOS
-                .filter(t => !doneTodos.has(t.id) && t.status !== "done" && t.priority === "normal")
-                .slice(0, 2);
-              const visibleTodos = [...urgentTodos, ...normalTodos].slice(0, 5);
-              const totalPending = MOCK_TODOS.filter(t => !doneTodos.has(t.id) && t.status !== "done").length;
-
-              return (
-                <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", display: "flex", flexDirection: "column" }}>
-                  <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border)", background: "var(--sl2)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <CheckSquare size={13} color="var(--fg-muted)" />
-                      <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>案件待辦</span>
-                      {urgentTodos.length > 0 && (
-                        <span style={{ fontSize: 10, fontWeight: 700, color: "#dc2626", background: "#fef2f2", padding: "0 5px", borderRadius: 8, border: "1px solid #fecaca" }}>
-                          {urgentTodos.length} 急
+                {urgentDls.length === 0 ? (
+                  <div style={{ padding: "16px", textAlign: "center", fontSize: 12, color: "var(--gray-9)" }}>30 天內無截止期限</div>
+                ) : (
+                  urgentDls.slice(0, 5).map((d, i, arr) => {
+                    const days   = Math.ceil((new Date(d.due_date).getTime() - Date.now()) / 86400000);
+                    const isRed  = days <= 7;
+                    return (
+                      <div key={d.id} style={{
+                        display: "grid", gridTemplateColumns: "130px 1fr 60px",
+                        alignItems: "center", gap: 10,
+                        padding: "9px 14px",
+                        borderBottom: i < arr.length - 1 ? "1px solid var(--gray-5)" : "none",
+                        borderLeft: `3px solid ${isRed ? "var(--red-9)" : "var(--orange-9)"}`,
+                        background: isRed ? "var(--red-2)" : "var(--color-background)",
+                      }}>
+                        <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, fontWeight: 600, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {d.case_number}
                         </span>
-                      )}
-                    </div>
-                    <Link href="/app/todo" style={{ fontSize: 12, color: "var(--fg-muted)", textDecoration: "none", display: "flex", alignItems: "center", gap: 2 }}>
-                      全部 {totalPending} 件 <ChevronRight size={11} />
-                    </Link>
-                  </div>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontSize: 12, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.description}</div>
+                          <div style={{ fontSize: 10, color: "var(--gray-9)", marginTop: 1 }}>{d.client_name}</div>
+                        </div>
+                        <span style={{ fontSize: 11, fontWeight: 700, color: isRed ? "var(--red-9)" : "var(--orange-9)", textAlign: "right" }}>
+                          {days <= 0 ? `逾期${Math.abs(days)}d` : `${days}d`}
+                        </span>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
 
-                  <div style={{ flex: 1, overflowY: "auto" }}>
+              {/* Case todos */}
+              {(() => {
+                const urgentTodos  = MOCK_TODOS.filter(t => !doneTodos.has(t.id) && t.status !== "done" && t.priority === "urgent");
+                const normalTodos  = MOCK_TODOS.filter(t => !doneTodos.has(t.id) && t.status !== "done" && t.priority === "normal");
+                const visibleTodos = [...urgentTodos, ...normalTodos].slice(0, 5);
+                const totalPending = MOCK_TODOS.filter(t => !doneTodos.has(t.id) && t.status !== "done").length;
+                return (
+                  <div style={{ border: "1px solid var(--gray-5)", borderRadius: 4, overflow: "hidden" }}>
+                    <div style={{ padding: "9px 14px", borderBottom: "1px solid var(--gray-5)", background: "var(--gray-2)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+                        <CheckSquare size={12} color="var(--gray-8)" />
+                        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-12)" }}>案件待辦</span>
+                        {urgentTodos.length > 0 && (
+                          <Badge variant="soft" color="red" size="1" style={{ fontSize: 10, fontWeight: 700 }}>
+                            {urgentTodos.length} 急
+                          </Badge>
+                        )}
+                      </div>
+                      <Link href="/app/todo" style={{ fontSize: 11, color: "var(--gray-8)", textDecoration: "none", display: "flex", alignItems: "center", gap: 2 }}>
+                        全部 {totalPending} 件 <ChevronRight size={10} />
+                      </Link>
+                    </div>
                     {visibleTodos.map((t, i) => {
-                      const days       = daysUntil(t.deadline);
-                      const dir        = DIRECTION_CONFIG[t.direction];
-                      const isUrgent   = t.priority === "urgent";
-                      const isSelected = selectedTodoId === t.id;
+                      const days     = daysUntil(t.deadline);
+                      const dir      = DIRECTION_CONFIG[t.direction];
+                      const isUrgent = t.priority === "urgent";
+                      const isSel    = selectedTodoId === t.id;
                       return (
-                        <div
-                          key={t.id}
-                          onClick={() => selectTodo(isSelected ? null : t.id)}
+                        <div key={t.id}
+                          onClick={() => selectTodo(isSel ? null : t.id)}
                           style={{
-                            padding: "10px 14px",
-                            borderBottom: i < visibleTodos.length - 1 ? "1px solid var(--border)" : "none",
-                            borderLeft: `3px solid ${isSelected ? "#6366f1" : isUrgent ? "#dc2626" : "#d97706"}`,
-                            background: isSelected ? "#eef2ff" : isUrgent ? "#fff5f5" : "transparent",
-                            display: "flex", alignItems: "flex-start", gap: 10,
-                            cursor: "pointer", transition: "background 0.1s",
+                            padding: "9px 14px",
+                            borderBottom: i < visibleTodos.length - 1 ? "1px solid var(--gray-5)" : "none",
+                            borderLeft: `3px solid ${isSel ? "var(--green-9)" : isUrgent ? "var(--red-9)" : "var(--orange-9)"}`,
+                            background: isSel ? "var(--green-2)" : isUrgent ? "var(--red-2)" : "var(--color-background)",
+                            display: "flex", alignItems: "flex-start", gap: 8, cursor: "pointer",
                           }}
                         >
-                          {/* Checkbox */}
-                          <button
-                            onClick={(e) => { e.stopPropagation(); setDoneTodos(prev => { const n = new Set(prev); n.add(t.id); return n; }); }}
-                            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 1, flexShrink: 0, color: "var(--fg-subtle)" }}
-                          >
-                            <CheckSquare size={14} />
+                          <button onClick={(e) => { e.stopPropagation(); setDoneTodos(prev => { const n = new Set(prev); n.add(t.id); return n; }); }}
+                            style={{ background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 1, flexShrink: 0, color: "var(--gray-9)" }}>
+                            <CheckSquare size={13} />
                           </button>
-
                           <div style={{ flex: 1, minWidth: 0 }}>
-                            {/* Case + direction badge */}
-                            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 3 }}>
-                              <span style={{ fontSize: 10, fontWeight: 700, fontFamily: "ui-monospace, monospace", color: "var(--fg-muted)", background: "var(--sl3)", padding: "1px 5px", borderRadius: 3, border: "1px solid var(--border)" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
+                              <Badge variant="outline" color="gray" style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, fontSize: 10, padding: "1px 5px" }}>
                                 {t.case_number}
-                              </span>
-                              <span style={{ fontSize: 10, fontWeight: 600, color: dir.color, background: dir.bg, padding: "1px 5px", borderRadius: 3 }}>
+                              </Badge>
+                              <Badge variant="soft" style={{ fontSize: 10, fontWeight: 600, color: dir.color, padding: "1px 5px" }}>
                                 {dir.label}
-                              </span>
+                              </Badge>
                             </div>
-                            {/* Action */}
-                            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--fg)", lineHeight: 1.4, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
+                            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--gray-12)", lineHeight: 1.4, overflow: "hidden", display: "-webkit-box", WebkitLineClamp: 2, WebkitBoxOrient: "vertical" }}>
                               {t.action}
                             </div>
-                            {/* Deadline */}
                             {days !== null && (
-                              <div style={{ marginTop: 4, fontSize: 11, color: days <= 7 ? "#dc2626" : days <= 21 ? "#d97706" : "var(--fg-subtle)", display: "flex", alignItems: "center", gap: 3 }}>
-                                <Clock size={10} />
+                              <div style={{ marginTop: 3, fontSize: 10, color: days <= 7 ? "var(--red-9)" : days <= 21 ? "var(--orange-9)" : "var(--gray-9)", display: "flex", alignItems: "center", gap: 3 }}>
+                                <Clock size={9} />
                                 {days <= 0 ? `逾期 ${Math.abs(days)} 天` : `${days} 天後截止`}
                               </div>
                             )}
@@ -535,26 +414,109 @@ export default function AppOverviewPage() {
                         </div>
                       );
                     })}
-
                     {visibleTodos.length === 0 && (
-                      <div style={{ padding: "24px 14px", textAlign: "center", fontSize: 12, color: "var(--fg-subtle)" }}>
-                        <CheckCircle size={20} color="#16a34a" style={{ marginBottom: 6 }} /><br />
-                        目前無待辦事項
-                      </div>
+                      <div style={{ padding: "20px", textAlign: "center", fontSize: 12, color: "var(--gray-9)" }}>目前無待辦事項</div>
                     )}
                   </div>
+                );
+              })()}
+            </div>
 
-                  <Link href="/app/todo" style={{
-                    padding: "9px 14px", borderTop: "1px solid var(--border)",
-                    fontSize: 12, color: "var(--fg-muted)", textDecoration: "none",
-                    display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
-                    background: "var(--sl1)", transition: "background 0.1s",
-                  }}>
-                    <CheckSquare size={12} />查看完整待辦清單
-                  </Link>
+            {/* ─── RIGHT: 信件收發 ─── */}
+            <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+
+              {/* Domain label */}
+              <div style={{ display: "flex", alignItems: "center", gap: 7 }}>
+                <div style={{ width: 3, height: 14, borderRadius: 2, background: "var(--gray-8)", flexShrink: 0 }} />
+                <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-8)", textTransform: "uppercase", letterSpacing: "0.07em" }}>信件收發</span>
+              </div>
+
+              {/* Pending emails needing review */}
+              {pending.length > 0 && (
+                <div style={{ border: "1px solid var(--orange-6)", borderRadius: 4, overflow: "hidden", background: "var(--orange-2)" }}>
+                  <div style={{ padding: "9px 14px", borderBottom: "1px solid var(--orange-6)", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
+                    <div style={{ display: "flex", alignItems: "center", gap: 5 }}>
+                      <AlertCircle size={12} color="var(--orange-9)" />
+                      <span style={{ fontSize: 12, fontWeight: 600, color: "var(--orange-11)" }}>待人工確認</span>
+                      <Badge variant="soft" color="orange" size="1" style={{ fontWeight: 700 }}>
+                        {pending.length}
+                      </Badge>
+                    </div>
+                    <Button variant="ghost" color="orange" size="1" onClick={() => router.push("/app/emails?status=pending")} style={{ cursor: "pointer" }}>
+                      全部確認 <ChevronRight size={10} />
+                    </Button>
+                  </div>
+                  {pending.map((e, i) => {
+                    const r = PENDING_REASONS[e.id] ?? DEFAULT_REASON;
+                    const isSel = selectedId === e.id;
+                    return (
+                      <div key={e.id}
+                        onClick={() => selectEmail(isSel ? null : e.id)}
+                        style={{
+                          padding: "10px 14px",
+                          borderBottom: i < pending.length - 1 ? "1px solid var(--orange-6)" : "none",
+                          cursor: "pointer", background: isSel ? "var(--orange-3)" : "transparent",
+                        }}
+                        onMouseEnter={el => { if (!isSel) el.currentTarget.style.background = "var(--orange-3)"; }}
+                        onMouseLeave={el => { if (!isSel) el.currentTarget.style.background = "transparent"; }}
+                      >
+                        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+                          <Badge variant="outline" style={{ fontSize: 10, fontWeight: 700, flexShrink: 0, color: codeColor[e.direction_code ?? ""] ?? "var(--gray-9)" }}>
+                            {e.direction_code ?? "?"}
+                          </Badge>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ fontSize: 12, fontWeight: 500, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.subject}</div>
+                            <div style={{ fontSize: 10, color: "var(--gray-9)", marginTop: 1 }}>
+                              {e.sender_name} ·
+                              <span style={{ marginLeft: 4, color: r.tagColor, fontWeight: 600 }}>{r.tag}</span>
+                            </div>
+                          </div>
+                          <HelpCircle size={11} color={r.tagColor} style={{ flexShrink: 0 }} />
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })()}
+              )}
+
+              {/* Recent emails */}
+              <div style={{ border: "1px solid var(--gray-5)", borderRadius: 4, overflow: "hidden" }}>
+                <div style={{ padding: "9px 14px", borderBottom: "1px solid var(--gray-5)", display: "flex", alignItems: "center", justifyContent: "space-between", background: "var(--gray-2)" }}>
+                  <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-12)" }}>最近信件</span>
+                  <Button variant="ghost" color="gray" size="1" onClick={() => router.push("/app/emails")} style={{ cursor: "pointer" }}>
+                    查看全部 <ChevronRight size={10} />
+                  </Button>
+                </div>
+                {recentEmails.map((e, i) => {
+                  const isSel = selectedId === e.id;
+                  return (
+                    <div key={e.id}
+                      onClick={() => selectEmail(isSel ? null : e.id)}
+                      style={{
+                        display: "flex", alignItems: "center", gap: 8, padding: "9px 14px",
+                        borderBottom: i < recentEmails.length - 1 ? "1px solid var(--gray-5)" : "none",
+                        cursor: "pointer", background: isSel ? "var(--gray-3)" : "var(--color-background)",
+                      }}
+                      onMouseEnter={el => { if (!isSel) el.currentTarget.style.background = "var(--gray-2)"; }}
+                      onMouseLeave={el => { if (!isSel) el.currentTarget.style.background = "var(--color-background)"; }}
+                    >
+                      <Badge variant="soft" color="gray" style={{ fontSize: 9, fontWeight: 700, flexShrink: 0, color: codeColor[e.direction_code ?? ""] ?? "var(--gray-9)" }}>
+                        {e.direction_code ?? "?"}
+                      </Badge>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontSize: 12, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.subject}</div>
+                        <div style={{ fontSize: 10, color: "var(--gray-9)", marginTop: 1 }}>
+                          {e.sender_name} · {new Date(e.received_at).toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" })}
+                        </div>
+                      </div>
+                      {e.status === "pending"   && <AlertCircle  size={11} color="var(--orange-9)" style={{ flexShrink: 0 }} />}
+                      {e.status === "confirmed" && <CheckCircle  size={11} color="var(--green-9)" style={{ flexShrink: 0 }} />}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
@@ -563,8 +525,8 @@ export default function AppOverviewPage() {
       <div style={{
         width: panelOpen ? panelWidth : 0,
         overflow: "hidden",
-        borderLeft: panelOpen ? "1px solid var(--border)" : "none",
-        background: "var(--bg)",
+        borderLeft: panelOpen ? "1px solid var(--gray-5)" : "none",
+        background: "var(--color-background)",
         flexShrink: 0,
         display: "flex", flexDirection: "column",
         position: "relative",
@@ -576,7 +538,7 @@ export default function AppOverviewPage() {
               position: "absolute", left: -3, top: 0, bottom: 0, width: 6,
               cursor: "col-resize", zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <div style={{ width: 2, height: 32, borderRadius: 2, background: "var(--sl7)", opacity: 0.5 }} />
+              <div style={{ width: 2, height: 32, borderRadius: 2, background: "var(--gray-7)", opacity: 0.5 }} />
             </div>
             {panelType === "email" && selectedId && (
               <EmailDetailPanel

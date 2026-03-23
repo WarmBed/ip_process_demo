@@ -2,6 +2,7 @@
 
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
+import { Button, IconButton, TextArea } from "@radix-ui/themes";
 import {
   Send, Bot, X, ChevronLeft, ChevronRight, Image as ImageIcon, Navigation,
 } from "lucide-react";
@@ -21,10 +22,10 @@ interface Message {
 }
 
 const SUGGESTION_GROUPS = [
-  { label: "📊 統計", items: ["今天處理了幾封？", "本週統計", "累計成本多少？"] },
-  { label: "📋 信件", items: ["有哪些待確認？", "最新 5 封信件", "有附件的信件"] },
-  { label: "📁 案號", items: ["BRIT25710PUS1 的信件", "KOIT20004TUS7 最新狀態"] },
-  { label: "🧭 跳轉", items: ["帶我去信件列表", "帶我去分類規則", "前往統計頁面"] },
+  { label: "IP概況", items: ["目前有幾件OA待答辯", "7天內截止案件", "年費即將到期"] },
+  { label: "查案", items: ["TSMC23014PUS 進度", "台積電的案件", "今日官方來文"] },
+  { label: "人員", items: ["陳建志目前loading", "各專利師工作量", "誰的OA最多"] },
+  { label: "跳轉", items: ["帶我去截止期限", "帶我去人員管理", "前往統計頁面"] },
 ];
 
 export default function AgentPanel() {
@@ -65,7 +66,7 @@ export default function AgentPanel() {
 
   const [messages, setMessages] = useState<Message[]>([{
     id: "init", role: "ai",
-    content: "你好！我是 MailFlow AI。\n\n可以用自然語言查詢信件、統計、案號，也可以說「帶我去…」直接跳轉頁面。",
+    content: "你好，我是 IP Winner 助理。\n\n可以查詢案件進度、截止期限、人員工作量，也可以說「帶我去…」直接跳轉頁面。\n\n試試下方的範例問題。",
     timestamp: new Date(),
   }]);
   const [input, setInput]               = useState("");
@@ -102,9 +103,11 @@ export default function AgentPanel() {
 
   if (collapsed) {
     return (
-      <div style={{ width: 40, borderRight: "1px solid var(--border)", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 8, background: "var(--sl2)" }}>
-        <button className="btn-ghost" onClick={() => setCollapsed(false)} title="展開 AI 助理"><ChevronRight size={16} /></button>
-        <Bot size={16} color="var(--fg-subtle)" />
+      <div style={{ width: 40, borderRight: "1px solid var(--gray-6)", display: "flex", flexDirection: "column", alignItems: "center", paddingTop: 12, gap: 8, background: "var(--gray-2)" }}>
+        <IconButton variant="ghost" size="1" color="gray" onClick={() => setCollapsed(false)} title="展開助理">
+          <ChevronRight size={16} />
+        </IconButton>
+        <Bot size={16} color="var(--gray-9)" />
       </div>
     );
   }
@@ -112,30 +115,30 @@ export default function AgentPanel() {
   return (
     <div style={{
       width, minWidth: MIN_WIDTH, maxWidth: MAX_WIDTH,
-      borderRight: "1px solid var(--border)",
+      borderRight: "1px solid var(--gray-6)",
       display: "flex", flexDirection: "column",
-      background: "var(--sl1)", flexShrink: 0, position: "relative",
+      background: "var(--gray-1)", flexShrink: 0, position: "relative",
     }}>
       {/* Drag handle */}
       <div onMouseDown={onResizeDown} style={{
         position: "absolute", right: -3, top: 0, bottom: 0, width: 6,
         cursor: "col-resize", zIndex: 10, display: "flex", alignItems: "center", justifyContent: "center",
       }}>
-        <div style={{ width: 2, height: 32, borderRadius: 2, background: "var(--sl7)", opacity: 0.5 }} />
+        <div style={{ width: 2, height: 32, borderRadius: 2, background: "var(--gray-7)", opacity: 0.5 }} />
       </div>
 
       {/* Header */}
       <div style={{
-        padding: "10px 12px", borderBottom: "1px solid var(--border)",
+        padding: "10px 12px", borderBottom: "1px solid var(--gray-6)",
         display: "flex", alignItems: "center", justifyContent: "space-between", flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Bot size={14} color="var(--fg-muted)" />
-          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>AI 助理</span>
+          <Bot size={14} color="var(--gray-9)" />
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--gray-12)" }}>助理</span>
         </div>
-        <button className="btn-ghost" onClick={() => setCollapsed(true)} style={{ padding: "2px 4px" }}>
+        <IconButton variant="ghost" size="1" color="gray" onClick={() => setCollapsed(true)}>
           <ChevronLeft size={14} />
-        </button>
+        </IconButton>
       </div>
 
       {/* Messages */}
@@ -143,7 +146,7 @@ export default function AgentPanel() {
         {messages.map(msg => (
           <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}>
             {msg.image && (
-              <img src={msg.image} alt="uploaded" style={{ maxWidth: 160, borderRadius: 8, marginBottom: 4, border: "1px solid var(--border)" }} />
+              <img src={msg.image} alt="uploaded" style={{ maxWidth: 160, borderRadius: 8, marginBottom: 4, border: "1px solid var(--gray-6)" }} />
             )}
             <div
               className={msg.role === "user" ? "agent-msg-user" : "agent-msg-ai"}
@@ -156,43 +159,40 @@ export default function AgentPanel() {
                 : msg.content }}
             />
             {msg.role === "ai" && msg.action && (
-              <button
+              <Button
+                variant="solid"
+                size="1"
+                color="green"
                 onClick={() => router.push(msg.action!.url)}
-                style={{
-                  marginTop: 6, display: "inline-flex", alignItems: "center", gap: 5,
-                  fontSize: 11, fontWeight: 500, padding: "4px 10px", borderRadius: 5,
-                  background: "var(--fg)", color: "var(--bg)", border: "none", cursor: "pointer", opacity: 0.88,
-                }}
+                style={{ marginTop: 6, gap: 5 }}
               >
                 <Navigation size={10} /> {msg.action.label}
-              </button>
+              </Button>
             )}
-            <span style={{ fontSize: 10, color: "var(--fg-subtle)", marginTop: 2 }}>
+            <span style={{ fontSize: 10, color: "var(--gray-9)", marginTop: 2 }}>
               {msg.timestamp.toLocaleTimeString("zh-TW", { hour: "2-digit", minute: "2-digit" })}
             </span>
           </div>
         ))}
         {loading && (
           <div style={{ display: "flex" }}>
-            <div className="agent-msg-ai" style={{ color: "var(--fg-subtle)" }}><span style={{ letterSpacing: 2 }}>●●●</span></div>
+            <div className="agent-msg-ai" style={{ color: "var(--gray-9)" }}><span style={{ letterSpacing: 2 }}>...</span></div>
           </div>
         )}
         <div ref={bottomRef} />
       </div>
 
-      {/* Suggestions (shown only before first user message) */}
+      {/* Suggestions */}
       {messages.length === 1 && (
         <div style={{ padding: "0 10px 8px", display: "flex", flexDirection: "column", gap: 8 }}>
           {SUGGESTION_GROUPS.map(group => (
             <div key={group.label}>
-              <div style={{ fontSize: 10, color: "var(--fg-subtle)", fontWeight: 600, marginBottom: 4, paddingLeft: 2 }}>{group.label}</div>
+              <div style={{ fontSize: 10, color: "var(--gray-9)", fontWeight: 600, marginBottom: 4, paddingLeft: 2 }}>{group.label}</div>
               <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                 {group.items.map(s => (
-                  <button key={s} onClick={() => sendMessage(s)} style={{
-                    fontSize: 11, padding: "3px 9px", borderRadius: 5,
-                    border: "1px solid var(--border)", background: "var(--sl3)",
-                    color: "var(--fg-muted)", cursor: "pointer",
-                  }}>{s}</button>
+                  <Button key={s} variant="outline" size="1" color="gray" onClick={() => sendMessage(s)} style={{ fontSize: 11 }}>
+                    {s}
+                  </Button>
                 ))}
               </div>
             </div>
@@ -203,37 +203,39 @@ export default function AgentPanel() {
       {/* Image preview */}
       {pendingImage && (
         <div style={{ padding: "0 10px 6px", position: "relative", display: "inline-block" }}>
-          <img src={pendingImage} alt="preview" style={{ height: 56, borderRadius: 6, border: "1px solid var(--border)" }} />
-          <button onClick={() => setPendingImage(null)} style={{ position: "absolute", top: -4, right: 14, background: "var(--fg)", color: "var(--bg)", border: "none", borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
+          <img src={pendingImage} alt="preview" style={{ height: 56, borderRadius: 6, border: "1px solid var(--gray-6)" }} />
+          <button onClick={() => setPendingImage(null)} style={{ position: "absolute", top: -4, right: 14, background: "var(--gray-12)", color: "white", border: "none", borderRadius: "50%", width: 16, height: 16, display: "flex", alignItems: "center", justifyContent: "center", cursor: "pointer" }}>
             <X size={10} />
           </button>
         </div>
       )}
 
       {/* Input */}
-      <div style={{ padding: "8px 10px", borderTop: "1px solid var(--border)", display: "flex", gap: 6, alignItems: "flex-end" }}>
-        <div style={{ flex: 1, border: "1px solid var(--border)", borderRadius: 8, background: "var(--bg)", display: "flex", alignItems: "flex-end", padding: "6px 8px", gap: 4 }}>
+      <div style={{ padding: "8px 10px", borderTop: "1px solid var(--gray-6)", display: "flex", gap: 6, alignItems: "flex-end" }}>
+        <div style={{ flex: 1, border: "1px solid var(--gray-6)", borderRadius: 8, background: "var(--color-background)", display: "flex", alignItems: "flex-end", padding: "6px 8px", gap: 4 }}>
           <textarea
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } }}
             placeholder="輸入問題或說「帶我去…」"
             rows={1}
-            style={{ flex: 1, border: "none", outline: "none", resize: "none", fontSize: 13, lineHeight: 1.5, background: "transparent", color: "var(--fg)", fontFamily: "inherit", maxHeight: 80, overflowY: "auto" }}
+            style={{ flex: 1, border: "none", outline: "none", resize: "none", fontSize: 13, lineHeight: 1.5, background: "transparent", color: "var(--gray-12)", fontFamily: "inherit", maxHeight: 80, overflowY: "auto" }}
           />
-          <button className="btn-ghost" onClick={() => fileRef.current?.click()} style={{ padding: "2px 3px", flexShrink: 0 }} title="上傳圖片">
+          <IconButton variant="ghost" size="1" color="gray" onClick={() => fileRef.current?.click()} title="上傳圖片">
             <ImageIcon size={14} />
-          </button>
+          </IconButton>
           <input ref={fileRef} type="file" accept="image/*" onChange={handleImage} style={{ display: "none" }} />
         </div>
-        <button
-          className="btn-primary"
+        <Button
+          variant="solid"
+          size="2"
+          color="green"
           onClick={() => sendMessage()}
           disabled={loading || (!input.trim() && !pendingImage)}
-          style={{ height: 34, width: 34, padding: 0, justifyContent: "center", flexShrink: 0 }}
+          style={{ width: 34, height: 34, padding: 0, justifyContent: "center", flexShrink: 0 }}
         >
           <Send size={13} />
-        </button>
+        </Button>
       </div>
     </div>
   );

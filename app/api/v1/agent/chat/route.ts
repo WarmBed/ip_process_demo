@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { MOCK_EMAILS, MOCK_SENDERS, MOCK_STATS, MOCK_BENEFITS } from "@/lib/mock-data";
+import { MOCK_EMAILS, MOCK_SENDERS, MOCK_STATS, MOCK_BENEFITS, MOCK_ATTORNEYS, MOCK_IP_PORTFOLIO } from "@/lib/mock-data";
+import { MOCK_CASES, MOCK_STAFF, MOCK_DEADLINES } from "@/lib/mock-cases";
 
 // ── Types ─────────────────────────────────────────────────────
 
@@ -79,8 +80,99 @@ function buildResponse(message: string): AgentResponse {
     return { reply: `好的，帶你回總覽！`, action: { type: "navigate", url: "/app", label: "開啟總覽", auto: true } };
   }
 
-  // ── 統計 / 概覽 ──────────────────────────────────────────
+  if (navIntent && match(q, ["截止", "到期", "期限", "deadline", "截止日"])) {
+    return { reply: `好的，帶你去截止日管理！`, action: { type: "navigate", url: "/app/deadlines", label: "開啟截止日管理", auto: true } };
+  }
 
+  if (navIntent && match(q, ["人員", "staff", "專利師", "律師", "loading"])) {
+    return { reply: `好的，帶你去人員管理！`, action: { type: "navigate", url: "/app/staff", label: "開啟人員管理", auto: true } };
+  }
+
+  // ── IP Portfolio 概況 ────────────────────────────────────────
+
+  if (match(q, ["portfolio", "有效案件", "ip概況", "案件概況", "比例", "案件分布", "幾件案", "目前案件", "有幾件", "管理案件"])) {
+    const { total_active_cases, patent_cases, trademark_cases, pending_oa, due_this_week, due_this_month, new_this_month, countries } = MOCK_IP_PORTFOLIO;
+    return {
+      reply: [
+        `🗂️ **IP 案件概況**`,
+        ``,
+        `• 有效管理案件：**${total_active_cases} 件**`,
+        `• 專利案件：**${patent_cases} 件**（${Math.round(patent_cases / total_active_cases * 100)}%）`,
+        `• 商標案件：**${trademark_cases} 件**（${Math.round(trademark_cases / total_active_cases * 100)}%）`,
+        ``,
+        `⏰ **近期截止**`,
+        `• 本週到期：**${due_this_week} 件**`,
+        `• 本月到期：**${due_this_month} 件**`,
+        `• 待答辯 OA：**${pending_oa} 件**`,
+        ``,
+        `📥 本月新案：**${new_this_month} 件**`,
+        `🌏 管理國家：${countries.join("、")}`,
+      ].join("\n"),
+      action: { type: "navigate", url: "/app/stats", label: "查看詳細統計" },
+    };
+  }
+
+  // ── 今日官方來文 ──────────────────────────────────────────────
+
+  if (match(q, ["今日來文", "今天來文", "今天官方", "新收來文", "3/18來文", "今天收到什麼", "最新來文"])) {
+    return {
+      reply: [
+        `📬 **今日新收官方來文（3/18）— 3 件**`,
+        ``,
+        `1. 🇺🇸 **TSMC23014PUS** — USPTO`,
+        `   Non-Final Office Action  ·  **OA答辯**  ·  截止 06/18（92天後）`,
+        `   AI 建議：指派陳建志（半導體專長）  ·  信心 97%`,
+        ``,
+        `2. 🇪🇺 **EPPA23801EP** — EPO`,
+        `   Rule 71(3) Communication  ·  **領證費**  ·  截止 04/30（43天後）`,
+        `   AI 建議：林雅婷聯繫 European Client C  ·  信心 99%`,
+        ``,
+        `3. 🇨🇳 **FOXC24003PCN** — CNIPA ⚠️ 待確認`,
+        `   第一次審查意見通知書  ·  信心 68%，建議人工確認類別`,
+      ].join("\n"),
+      action: { type: "navigate", url: "/app/patent", label: "前往 IP概況查看來文" },
+    };
+  }
+
+  // ── OA 待答辯 ────────────────────────────────────────────────
+
+  if (match(q, ["待答辯", "oa待答辯", "oa 待", "幾件oa", "答辯截止", "office action"])) {
+    const oaDl = MOCK_DEADLINES.filter((d) => d.type === "oa_response" && d.status === "pending");
+    return {
+      reply: [
+        `📝 **OA 待答辯案件 — ${oaDl.length} 件**`,
+        ``,
+        ...oaDl.map((d) => {
+          const days = Math.ceil((new Date(d.due_date).getTime() - Date.now()) / 86400000);
+          const dot   = days <= 14 ? "🔴" : days <= 30 ? "🟡" : "🟢";
+          return `${dot} **${d.case_number}** — ${d.client_name}\n   ${d.description}  ·  截止 ${d.due_date.slice(5)}  ·  **${days}d**  ·  負責：${d.assignee_name}`;
+        }),
+      ].join("\n"),
+      action: { type: "navigate", url: "/app/deadlines", label: "前往截止期限管理" },
+    };
+  }
+
+  // ── 年費 / 維護費 ────────────────────────────────────────────
+
+  if (match(q, ["年費", "維護費", "maintenance", "renewal", "繳費", "annuity", "續費", "年繳"])) {
+    const annuities = MOCK_DEADLINES.filter((d) => ["annuity", "renewal", "grant_deadline"].includes(d.type) && d.status === "pending");
+    return {
+      reply: [
+        `💰 **年費 / 維護費提示 — ${annuities.length} 件**`,
+        ``,
+        ...annuities.map((d) => {
+          const days = Math.ceil((new Date(d.due_date).getTime() - Date.now()) / 86400000);
+          const dot   = days <= 30 ? "🔴" : days <= 90 ? "🟡" : "🟢";
+          return `${dot} **${d.case_number}** — ${d.client_name}\n   ${d.description}  ·  截止 ${d.due_date.slice(5)}（${days} 天後）  ·  ${d.assignee_name}`;
+        }),
+        ``,
+        `⚠️ 請確認各客戶已收到年費通知。`,
+      ].join("\n"),
+      action: { type: "navigate", url: "/app/deadlines", label: "查看年費截止清單" },
+    };
+  }
+
+  // ── 今天 ─────────────────────────────────────────────────────
   if (match(q, ["今天", "today", "3/17", "3月17"])) {
     const today = MOCK_EMAILS.filter((e) => e.received_at.startsWith("2026-03-17"));
     const codes = [...new Set(today.map((e) => e.direction_code).filter(Boolean))];
@@ -168,11 +260,112 @@ function buildResponse(message: string): AgentResponse {
         };
   }
 
+  // ── 人員 Loading ────────────────────────────────────────────
+
+  for (const s of MOCK_STAFF) {
+    if (q.includes(s.name)) {
+      const myDl = MOCK_DEADLINES.filter((d) => d.assignee_name === s.name && d.status === "pending");
+      const oaCnt = myDl.filter((d) => d.type === "oa_response").length;
+      const loadBar = "█".repeat(Math.min(8, Math.floor(s.active_cases / 5))) + "░".repeat(Math.max(0, 8 - Math.floor(s.active_cases / 5)));
+      return {
+        reply: [
+          `👤 **${s.name}（${s.title}）**`,
+          ``,
+          `• 負責案件：**${s.active_cases} 件**  ${loadBar}`,
+          `• 專長：${s.specialties.join("、")}`,
+          `• 待辦截止：**${myDl.length} 件**（OA答辯 ${oaCnt} 件）`,
+          myDl.length > 0 ? `` : null,
+          ...myDl.slice(0, 4).map((d) => {
+            const days = Math.ceil((new Date(d.due_date).getTime() - Date.now()) / 86400000);
+            const dot   = days <= 14 ? "🔴" : days <= 30 ? "🟡" : "🟢";
+            return `  ${dot} **${d.case_number}** ${d.description.slice(0, 20)}  ·  ${days}d`;
+          }),
+        ].filter((x) => x !== null).join("\n"),
+        action: { type: "navigate", url: "/app/staff", label: "查看人員管理" },
+      };
+    }
+  }
+
+  if (match(q, ["loading", "工作量", "人員分配", "各專利師", "誰負責最多", "誰oa最多", "人員loading", "負載"])) {
+    const attorneys = MOCK_STAFF.filter((s) => s.role === "attorney" || s.role === "paralegal");
+    return {
+      reply: [
+        `👥 **人員 Loading 概況**`,
+        ``,
+        ...attorneys.map((s) => {
+          const myDl = MOCK_DEADLINES.filter((d) => d.assignee_name === s.name && d.status === "pending");
+          const oaCnt = myDl.filter((d) => d.type === "oa_response").length;
+          const bar   = "█".repeat(Math.min(8, Math.floor(s.active_cases / 5))) + "░".repeat(Math.max(0, 8 - Math.floor(s.active_cases / 5)));
+          return `**${s.name}**（${s.title}）\n  案件 ${s.active_cases} 件  ·  待辦截止 ${myDl.length} 件（OA ${oaCnt}）\n  ${bar}`;
+        }),
+        ``,
+        `⚠️ 負責最多截止件數：${attorneys.sort((a,b)=>MOCK_DEADLINES.filter(d=>d.assignee_name===b.name&&d.status==="pending").length-MOCK_DEADLINES.filter(d=>d.assignee_name===a.name&&d.status==="pending").length)[0].name}`,
+      ].join("\n"),
+      action: { type: "navigate", url: "/app/staff", label: "前往人員管理" },
+    };
+  }
+
+  // ── 客戶查詢 ─────────────────────────────────────────────────
+
+  const clientMap: Record<string, string> = {
+    "台積電": "台積電", "tsmc": "台積電",
+    "聯發科": "聯發科技", "mediatek": "聯發科技",
+    "鴻海": "鴻海精密", "foxconn": "鴻海精密",
+    "威剛": "威剛科技", "adata": "威剛科技",
+  };
+  for (const [kw, clientName] of Object.entries(clientMap)) {
+    if (q.includes(kw)) {
+      const cCases = MOCK_CASES.filter((c) => c.client_name === clientName);
+      const cDl    = MOCK_DEADLINES.filter((d) => d.client_name === clientName && d.status === "pending");
+      const oaCnt  = cCases.filter((c) => c.status === "oa_issued").length;
+      return {
+        reply: [
+          `🏢 **${clientName} — IP 案件概況**`,
+          ``,
+          `• 管理案件：**${cCases.length} 件**（專利 ${cCases.filter(c=>c.case_type==="invention").length}、設計 ${cCases.filter(c=>c.case_type==="design").length}、商標 ${cCases.filter(c=>c.case_type==="trademark").length}）`,
+          `• OA 待答辯：**${oaCnt} 件**`,
+          `• 近期截止：**${cDl.length} 件**`,
+          ``,
+          ...cCases.slice(0, 5).map((c) => {
+            const dl   = cDl.find((d) => d.case_number === c.case_number);
+            const days = dl ? Math.ceil((new Date(dl.due_date).getTime() - Date.now()) / 86400000) : null;
+            return `• **${c.case_number}** ${c.title.slice(0, 28)}\n  ${c.jurisdiction}  ·  ${c.assignee_name}${days !== null ? `  ·  截止 ${days}d` : ""}`;
+          }),
+          cCases.length > 5 ? `  …另有 ${cCases.length - 5} 件` : "",
+        ].filter(Boolean).join("\n"),
+        action: { type: "navigate", url: "/app/cases", label: `查看 ${clientName} 所有案件` },
+      };
+    }
+  }
+
   // ── 案號查詢 ─────────────────────────────────────────────
 
-  const caseMatch = q.match(/[a-z]{4}\d{5}[pmdtabcw][a-z]{2}\d*/i);
+  const caseMatch = q.match(/[a-z]{4}\d{5}[a-z]{1,3}\d*/i);
   if (caseMatch) {
     const caseNum = caseMatch[0].toUpperCase();
+
+    // Also look up in MOCK_CASES for full case details
+    const caseRecord = MOCK_CASES.find((c) => c.case_number === caseNum);
+    const caseDeadline = MOCK_DEADLINES.find((d) => d.case_number === caseNum && d.status === "pending");
+
+    if (caseRecord && !MOCK_EMAILS.some((e) => e.case_numbers.includes(caseNum))) {
+      const daysUntil = caseDeadline ? Math.ceil((new Date(caseDeadline.due_date).getTime() - Date.now()) / 86400000) : null;
+      return {
+        reply: [
+          `📁 **${caseRecord.case_number}**`,
+          `${caseRecord.title}`,
+          ``,
+          `• 客戶：**${caseRecord.client_name}**`,
+          `• 類型：${caseRecord.case_type}  ·  國家：${caseRecord.jurisdiction}`,
+          `• 狀態：${caseRecord.status}`,
+          `• 負責人：**${caseRecord.assignee_name}**`,
+          caseDeadline ? `• 下個截止：**${caseDeadline.due_date.slice(5)}**（${daysUntil}天後）— ${caseDeadline.description}` : "",
+          caseRecord.patent_number ? `• 專利號：${caseRecord.patent_number}` : "",
+        ].filter(Boolean).join("\n"),
+        action: { type: "navigate", url: "/app/patent", label: `查看 ${caseRecord.case_number} 詳情` },
+      };
+    }
+
     const related = MOCK_EMAILS.filter((e) => e.case_numbers.includes(caseNum));
 
     // If only 1 email, offer to open it directly
@@ -183,7 +376,7 @@ function buildResponse(message: string): AgentResponse {
           "",
           `\`${related[0].direction_code}\` **${related[0].sender_name}**`,
           `主旨：${related[0].subject}`,
-          `日期：${formatDate(related[0].received_at)}  ·  狀態：${{ pending:"⏳待確認", confirmed:"✅已確認", corrected:"🔵已修正", failed:"❌失敗" }[related[0].status ?? ""] ?? "—"}`,
+          `日期：${formatDate(related[0].received_at)}  ·  狀態：${({ pending:"⏳待確認", confirmed:"✅已確認", corrected:"🔵已修正", failed:"❌失敗" } as Record<string,string>)[related[0].status ?? ""] ?? "—"}`,
           `信心：${related[0].confidence ? Math.round(related[0].confidence * 100) + "%" : "—"}`,
         ].join("\n"),
         action: { type: "navigate", url: `/app/emails/${related[0].id}`, label: "開啟這封信件", auto: true },
@@ -199,7 +392,7 @@ function buildResponse(message: string): AgentResponse {
         `📁 **案號 ${caseNum} — 共 ${related.length} 封信件**`,
         "",
         ...related.map((e) =>
-          `• \`${e.direction_code}\` ${formatDate(e.received_at)} — ${e.subject.slice(0, 35)}\n  ${e.sender_name}  ·  ${{ pending:"⏳待確認", confirmed:"✅已確認", corrected:"🔵已修正", failed:"❌失敗" }[e.status ?? ""] ?? "—"}  ·  信心：${e.confidence ? Math.round(e.confidence * 100) + "%" : "—"}`
+          `• \`${e.direction_code}\` ${formatDate(e.received_at)} — ${e.subject.slice(0, 35)}\n  ${e.sender_name}  ·  ${({ pending:"⏳待確認", confirmed:"✅已確認", corrected:"🔵已修正", failed:"❌失敗" } as Record<string,string>)[e.status ?? ""] ?? "—"}  ·  信心：${e.confidence ? Math.round(e.confidence * 100) + "%" : "—"}`
         ),
         "",
         `最新語義名：「${related[0].semantic_name ?? "—"}」`,
@@ -332,19 +525,24 @@ function buildResponse(message: string): AgentResponse {
 
   // ── 期限 / deadline ──────────────────────────────────────
 
-  if (match(q, ["期限", "deadline", "截止", "到期"])) {
+  if (match(q, ["期限", "deadline", "截止", "到期", "7天", "本月截止"])) {
+    const allPending = MOCK_DEADLINES.filter((d) => d.status === "pending")
+      .sort((a, b) => new Date(a.due_date).getTime() - new Date(b.due_date).getTime());
+    const soon = allPending.slice(0, 6);
     return {
       reply: [
-        `⏰ **近期行動期限提醒**`,
-        "",
-        `• **3/17（今天）**：BRIT25710PUS1 OA 答辯草稿審閱（FA）`,
-        `• **3/20（3天後）**：KOIT20004TUS7 TA 委託答辯草稿`,
-        `• **4/15（29天後）**：BRIT25710PUS1 USPTO 官方 OA 期限`,
-        `• **6/15（90天後）**：KOIT20004TUS7 USPTO 官方 OA2 期限`,
-        "",
-        "⚠️ 優先處理 3/20 前的 KOIT20004TUS7 委託。",
+        `⏰ **近期截止期限（最近 ${soon.length} 件）**`,
+        ``,
+        ...soon.map((d) => {
+          const days = Math.ceil((new Date(d.due_date).getTime() - Date.now()) / 86400000);
+          const dot   = days <= 14 ? "🔴" : days <= 30 ? "🟡" : "🟢";
+          const typeLabel: Record<string, string> = { oa_response: "OA答辯", annuity: "年費", filing: "申請期限", grant_deadline: "領證費", renewal: "年繳", appeal: "上訴", other: "其他" };
+          return `${dot} **${d.case_number}** (${typeLabel[d.type] ?? d.type}) ${d.due_date.slice(5)}  **${days}d**  ${d.assignee_name}`;
+        }),
+        ``,
+        `共 ${allPending.length} 件待處理，其中 OA答辯 ${allPending.filter(d=>d.type==="oa_response").length} 件、年費 ${allPending.filter(d=>d.type==="annuity"||d.type==="renewal").length} 件。`,
       ].join("\n"),
-      action: { type: "navigate", url: "/app/emails?status=pending", label: "查看待確認信件" },
+      action: { type: "navigate", url: "/app/deadlines", label: "前往截止期限管理" },
     };
   }
 
@@ -412,7 +610,7 @@ function buildResponse(message: string): AgentResponse {
         `📬 **最近 5 封信件**`,
         "",
         ...recent.map((e, i) =>
-          `${i + 1}. \`${e.direction_code ?? "?"}\` **${e.sender_name}**\n   ${e.subject.slice(0, 40)}\n   ${formatDate(e.received_at)}  ·  ${{ pending:"⏳待確認", confirmed:"✅已確認", corrected:"🔵已修正", failed:"❌失敗" }[e.status ?? ""] ?? ""}`
+          `${i + 1}. \`${e.direction_code ?? "?"}\` **${e.sender_name}**\n   ${e.subject.slice(0, 40)}\n   ${formatDate(e.received_at)}  ·  ${({ pending:"⏳待確認", confirmed:"✅已確認", corrected:"🔵已修正", failed:"❌失敗" } as Record<string,string>)[e.status ?? ""] ?? ""}`
         ),
       ].join("\n"),
       action: { type: "navigate", url: "/app/emails", label: "查看全部信件" },
@@ -424,19 +622,20 @@ function buildResponse(message: string): AgentResponse {
   if (match(q, ["能做什麼", "功能", "help", "幫助", "怎麼用"])) {
     return {
       reply: [
-        `🤖 **MailFlow AI 助理可以幫你：**`,
+        `🤖 **IP Winner AI 助理可以幫你：**`,
         "",
-        `**📊 統計查詢**  →  今天/本週/累計統計`,
-        `**📁 案號查詢**  →  BRIT25710PUS1 的信件`,
-        `**⏰ 期限管理**  →  近期有哪些 deadline？`,
-        `**👥 Sender**   →  代理人/客戶/政府信件`,
-        `**📎 附件**     →  有附件的信件`,
+        `**📊 IP概況**      →  今日官方來文、目前有幾件OA待答辯`,
+        `**📁 案號查詢**    →  TSMC23014PUS 進度、KOIT20004TUS7 狀態`,
+        `**🏢 客戶查案**    →  台積電的案件、聯發科目前狀態`,
+        `**👥 人員 Loading** →  陳建志目前負責幾件、各專利師工作量`,
+        `**⏰ 截止管理**    →  近期截止、OA 待答辯、年費即將到期`,
+        `**📬 信件查詢**    →  代理人來信、政府來文、有附件的信件`,
         "",
-        `**🧭 頁面跳轉**  →  直接說「帶我去 xxx」`,
-        `• 「帶我去信件列表」`,
-        `• 「帶我去分類規則」`,
+        `**🧭 頁面跳轉**    →  直接說「帶我去 xxx」`,
+        `• 「帶我去截止期限」`,
+        `• 「帶我去人員管理」`,
         `• 「前往統計頁面」`,
-        `• 「帶我去設定」`,
+        `• 「帶我去信件列表」`,
         "",
         "也支援上傳圖片讓我協助分析！",
       ].join("\n"),
@@ -446,11 +645,12 @@ function buildResponse(message: string): AgentResponse {
   // ── Fallback ─────────────────────────────────────────────
 
   const suggestions = [
-    "「今天處理了幾封？」",
-    "「帶我去待確認信件」",
-    "「BRIT25710PUS1 的信件」",
-    "「近期有哪些 deadline？」",
-    "「帶我去分類規則」",
+    "「目前有幾件OA待答辯？」",
+    "「台積電的案件」",
+    "「陳建志目前loading」",
+    "「今日官方來文」",
+    "「帶我去截止期限」",
+    "「年費即將到期」",
   ];
   const random = suggestions[Math.floor(Math.random() * suggestions.length)];
 

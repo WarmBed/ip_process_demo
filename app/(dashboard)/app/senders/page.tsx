@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Plus, Search } from "lucide-react";
 import type { Sender, ApiResponse } from "@/lib/types";
 import { Loading } from "@/components/loading";
+import { Button, Badge, Text, Box, Flex } from "@radix-ui/themes";
 
 const ROLE_LABELS: Record<string, string> = {
   C: "客戶",
@@ -13,12 +14,12 @@ const ROLE_LABELS: Record<string, string> = {
   X: "未知",
 };
 
-const ROLE_COLORS: Record<string, string> = {
-  C: "#166534",
-  A: "#1e40af",
-  G: "#0e7490",
-  S: "#6b7280",
-  X: "#92400e",
+const ROLE_BADGE_COLOR: Record<string, "green" | "blue" | "cyan" | "gray" | "amber"> = {
+  C: "green",
+  A: "blue",
+  G: "cyan",
+  S: "gray",
+  X: "amber",
 };
 
 const SOURCE_LABELS: Record<string, string> = {
@@ -28,15 +29,11 @@ const SOURCE_LABELS: Record<string, string> = {
 };
 
 function RoleBadge({ role }: { role: string }) {
-  const color = ROLE_COLORS[role] ?? "#6b7280";
+  const color = ROLE_BADGE_COLOR[role] ?? "gray";
   return (
-    <span style={{
-      display: "inline-flex", alignItems: "center",
-      padding: "1px 8px", borderRadius: 4, fontSize: 11, fontWeight: 600,
-      background: color + "15", color, border: `1px solid ${color}30`,
-    }}>
+    <Badge variant="soft" color={color} size="1">
       {role} · {ROLE_LABELS[role] ?? role}
-    </span>
+    </Badge>
   );
 }
 
@@ -68,43 +65,42 @@ export default function SendersPage() {
     <div style={{ padding: "24px 28px", maxWidth: 900 }}>
 
       {/* Toolbar */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "flex-end", marginBottom: 16 }}>
-        <button className="btn-primary" style={{ gap: 6 }}>
+      <Flex align="center" justify="end" mb="4">
+        <Button variant="solid" color="green" style={{ gap: 6 }}>
           <Plus size={13} />
           新增
-        </button>
-      </div>
+        </Button>
+      </Flex>
 
       {/* Search */}
-      <div style={{
-        display: "flex", alignItems: "center", gap: 8,
-        border: "1px solid var(--border)", borderRadius: 7,
-        background: "var(--bg)", padding: "0 12px", height: 36,
-        marginBottom: 16, maxWidth: 360,
+      <Flex align="center" gap="2" mb="4" style={{
+        border: "1px solid var(--gray-6)", borderRadius: 7,
+        background: "var(--color-background)", padding: "0 12px", height: 36,
+        maxWidth: 360,
       }}>
-        <Search size={13} color="var(--fg-subtle)" />
+        <Search size={13} color="var(--gray-8)" />
         <input
           value={search}
           onChange={(e) => setSearch(e.target.value)}
           placeholder="搜尋 domain、公司名..."
           style={{
             flex: 1, border: "none", outline: "none",
-            fontSize: 13, background: "transparent", color: "var(--fg)",
+            fontSize: 13, background: "transparent", color: "var(--gray-12)",
           }}
         />
-      </div>
+      </Flex>
 
       {/* Table */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+      <Box style={{ border: "1px solid var(--gray-6)", borderRadius: 8, overflow: "hidden" }}>
 
         {/* Header */}
         <div style={{
           display: "grid",
           gridTemplateColumns: "220px 100px 1fr 100px 110px",
           padding: "8px 16px",
-          background: "var(--sl2)",
-          borderBottom: "1px solid var(--border)",
-          fontSize: 11, fontWeight: 600, color: "var(--fg-subtle)",
+          background: "var(--gray-3)",
+          borderBottom: "1px solid var(--gray-6)",
+          fontSize: 11, fontWeight: 600, color: "var(--gray-8)",
           letterSpacing: "0.04em", textTransform: "uppercase", gap: 12,
         }}>
           <div>Domain / Email</div>
@@ -117,9 +113,9 @@ export default function SendersPage() {
         {loading ? (
           <Loading />
         ) : filtered.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: "var(--fg-subtle)", fontSize: 13 }}>
+          <Box py="9" style={{ textAlign: "center", color: "var(--gray-8)", fontSize: 13 }}>
             沒有找到符合條件的 Sender
-          </div>
+          </Box>
         ) : (
           filtered.map((s, i) => (
             <div
@@ -129,43 +125,43 @@ export default function SendersPage() {
                 display: "grid",
                 gridTemplateColumns: "220px 100px 1fr 100px 110px",
                 padding: "10px 16px",
-                borderBottom: i < filtered.length - 1 ? "1px solid var(--border)" : "none",
+                borderBottom: i < filtered.length - 1 ? "1px solid var(--gray-6)" : "none",
                 alignItems: "center", gap: 12,
-                background: "var(--bg)",
+                background: "var(--color-background)",
               }}
             >
               {/* Key */}
-              <div style={{
-                fontFamily: "ui-monospace, monospace", fontSize: 12,
-                color: "var(--fg)", fontWeight: 500,
+              <Text size="1" style={{
+                fontFamily: "ui-monospace, monospace",
+                color: "var(--gray-12)", fontWeight: 500,
               }}>
                 {s.key}
-              </div>
+              </Text>
 
               {/* Role */}
               <div><RoleBadge role={s.role} /></div>
 
               {/* Name + notes */}
               <div>
-                <div style={{ fontSize: 13, color: "var(--fg)", fontWeight: 450 }}>{s.display_name}</div>
+                <Text size="2" weight="medium" style={{ color: "var(--gray-12)" }}>{s.display_name}</Text>
                 {s.notes && (
-                  <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: 2 }}>{s.notes}</div>
+                  <Text size="1" style={{ color: "var(--gray-8)", display: "block", marginTop: 2 }}>{s.notes}</Text>
                 )}
               </div>
 
               {/* Source */}
-              <div style={{ fontSize: 11, color: "var(--fg-muted)" }}>
+              <Text size="1" style={{ color: "var(--gray-9)" }}>
                 {SOURCE_LABELS[s.source] ?? s.source}
-              </div>
+              </Text>
 
               {/* Updated at */}
-              <div style={{ fontSize: 11, color: "var(--fg-subtle)" }}>
+              <Text size="1" style={{ color: "var(--gray-8)" }}>
                 {new Date(s.updated_at).toLocaleDateString("zh-TW", { month: "2-digit", day: "2-digit" })}
-              </div>
+              </Text>
             </div>
           ))
         )}
-      </div>
+      </Box>
     </div>
   );
 }

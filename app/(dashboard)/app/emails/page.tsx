@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Search, Filter, RefreshCw, Paperclip, ChevronDown } from "lucide-react";
+import { Search, Filter, RefreshCw, Paperclip } from "lucide-react";
+import { Button, Badge, Select, TextField } from "@radix-ui/themes";
 import { Loading } from "@/components/loading";
 import type { EmailListItem, ClassificationStatus, ApiResponse } from "@/lib/types";
 
@@ -19,7 +20,7 @@ const CODE_COLORS: Record<string, string> = {
 };
 
 function DirectionBadge({ code }: { code: string | null }) {
-  if (!code) return <span style={{ color: "var(--fg-subtle)", fontSize: 12 }}>—</span>;
+  if (!code) return <span style={{ color: "var(--gray-9)", fontSize: 12 }}>—</span>;
   const color = CODE_COLORS[code] ?? "#57534e";
   return (
     <span style={{
@@ -34,19 +35,29 @@ function DirectionBadge({ code }: { code: string | null }) {
 
 function StatusBadge({ status }: { status: ClassificationStatus | null }) {
   if (!status) return null;
-  return <span className={`badge badge-${status}`}>{STATUS_LABELS[status]}</span>;
+  const colorMap: Record<string, "orange" | "green" | "blue" | "red"> = {
+    pending: "orange",
+    confirmed: "green",
+    corrected: "blue",
+    failed: "red",
+  };
+  return (
+    <Badge variant="soft" color={colorMap[status] ?? "gray"} size="1">
+      {STATUS_LABELS[status]}
+    </Badge>
+  );
 }
 
 function ConfidenceBar({ value }: { value: number | null }) {
-  if (value === null) return <span style={{ color: "var(--fg-subtle)", fontSize: 12 }}>—</span>;
+  if (value === null) return <span style={{ color: "var(--gray-9)", fontSize: 12 }}>—</span>;
   const pct = Math.round(value * 100);
-  const color = pct >= 90 ? "var(--green)" : pct >= 70 ? "var(--yellow)" : "var(--red)";
+  const color = pct >= 90 ? "var(--green-9)" : pct >= 70 ? "var(--amber-9)" : "var(--red-9)";
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-      <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--sl4)", overflow: "hidden" }}>
+      <div style={{ width: 40, height: 4, borderRadius: 2, background: "var(--gray-4)", overflow: "hidden" }}>
         <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 2 }} />
       </div>
-      <span style={{ fontSize: 11, color: "var(--fg-muted)", minWidth: 26 }}>{pct}%</span>
+      <span style={{ fontSize: 11, color: "var(--gray-11)", minWidth: 26 }}>{pct}%</span>
     </div>
   );
 }
@@ -89,68 +100,57 @@ export default function EmailsPage() {
       {/* Toolbar */}
       <div style={{
         display: "flex", gap: 10, marginBottom: 16,
-        padding: "10px 14px", border: "1px solid var(--border)",
-        borderRadius: 8, background: "var(--sl2)", alignItems: "center",
+        padding: "10px 14px", border: "1px solid var(--gray-6)",
+        borderRadius: 6, background: "var(--gray-2)", alignItems: "center",
       }}>
-        <button className="btn-outline" onClick={fetchEmails} style={{ gap: 6, flexShrink: 0 }}>
+        <Button variant="outline" color="gray" onClick={fetchEmails} style={{ gap: 6, flexShrink: 0, cursor: "pointer" }}>
           <RefreshCw size={13} />
           重新整理
-        </button>
+        </Button>
         {/* Search */}
         <form onSubmit={handleSearch} style={{ flex: 1, display: "flex", gap: 6 }}>
-          <div style={{
-            flex: 1, display: "flex", alignItems: "center", gap: 8,
-            border: "1px solid var(--border)", borderRadius: 6,
-            background: "var(--bg)", padding: "0 10px", height: 32,
-          }}>
-            <Search size={13} color="var(--fg-subtle)" />
-            <input
+          <div style={{ flex: 1 }}>
+            <TextField.Root
               value={search}
-              onChange={(e) => setSearch(e.target.value)}
+              onChange={(e: React.ChangeEvent<HTMLInputElement>) => setSearch(e.target.value)}
               placeholder="搜尋主旨、sender、案號..."
-              style={{
-                flex: 1, border: "none", outline: "none", fontSize: 13,
-                background: "transparent", color: "var(--fg)",
-              }}
-            />
+              size="2"
+              style={{ width: "100%" }}
+            >
+              <TextField.Slot>
+                <Search size={13} color="var(--gray-9)" />
+              </TextField.Slot>
+            </TextField.Root>
           </div>
-          <button type="submit" className="btn-outline" style={{ height: 32 }}>搜尋</button>
+          <Button type="submit" variant="outline" color="gray" style={{ height: 32, cursor: "pointer" }}>搜尋</Button>
         </form>
 
         {/* Status filter */}
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <Filter size={13} color="var(--fg-subtle)" />
-          <div style={{ position: "relative" }}>
-            <select
-              value={status}
-              onChange={(e) => { setStatus(e.target.value as ClassificationStatus | ""); setPage(1); }}
-              style={{
-                appearance: "none", border: "1px solid var(--border)", borderRadius: 6,
-                padding: "0 28px 0 10px", height: 32, fontSize: 13,
-                background: "var(--bg)", color: "var(--fg)", cursor: "pointer",
-              }}
-            >
-              <option value="">所有狀態</option>
-              <option value="pending">待確認</option>
-              <option value="confirmed">已確認</option>
-              <option value="corrected">已修正</option>
-              <option value="failed">失敗</option>
-            </select>
-            <ChevronDown size={12} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none", color: "var(--fg-subtle)" }} />
-          </div>
+          <Filter size={13} color="var(--gray-9)" />
+          <Select.Root value={status} onValueChange={(v) => { setStatus(v as ClassificationStatus | ""); setPage(1); }}>
+            <Select.Trigger placeholder="所有狀態" variant="surface" />
+            <Select.Content>
+              <Select.Item value="">所有狀態</Select.Item>
+              <Select.Item value="pending">待確認</Select.Item>
+              <Select.Item value="confirmed">已確認</Select.Item>
+              <Select.Item value="corrected">已修正</Select.Item>
+              <Select.Item value="failed">失敗</Select.Item>
+            </Select.Content>
+          </Select.Root>
         </div>
       </div>
 
       {/* Table */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+      <div style={{ border: "1px solid var(--gray-6)", borderRadius: 6, overflow: "hidden" }}>
         {/* Table header */}
         <div style={{
           display: "grid",
           gridTemplateColumns: "160px 1fr 80px 160px 90px 80px 32px",
           padding: "8px 14px",
-          background: "var(--sl2)",
-          borderBottom: "1px solid var(--border)",
-          fontSize: 11, fontWeight: 600, color: "var(--fg-subtle)",
+          background: "var(--gray-2)",
+          borderBottom: "1px solid var(--gray-6)",
+          fontSize: 11, fontWeight: 600, color: "var(--gray-9)",
           letterSpacing: "0.04em", textTransform: "uppercase",
           gap: 12,
         }}>
@@ -167,7 +167,7 @@ export default function EmailsPage() {
         {loading ? (
           <Loading />
         ) : emails.length === 0 ? (
-          <div style={{ padding: "40px 0", textAlign: "center", color: "var(--fg-subtle)", fontSize: 13 }}>
+          <div style={{ padding: "40px 0", textAlign: "center", color: "var(--gray-9)", fontSize: 13 }}>
             沒有找到符合條件的信件
           </div>
         ) : (
@@ -180,15 +180,15 @@ export default function EmailsPage() {
                 display: "grid",
                 gridTemplateColumns: "160px 1fr 80px 160px 90px 80px 32px",
                 padding: "10px 14px",
-                borderBottom: i < emails.length - 1 ? "1px solid var(--border)" : "none",
+                borderBottom: i < emails.length - 1 ? "1px solid var(--gray-6)" : "none",
                 textDecoration: "none",
                 alignItems: "center",
                 gap: 12,
-                background: "var(--bg)",
+                background: "var(--color-background)",
               }}
             >
               {/* Date */}
-              <div style={{ fontSize: 12, color: "var(--fg-muted)" }}>
+              <div style={{ fontSize: 12, color: "var(--gray-11)" }}>
                 {new Date(email.received_at).toLocaleString("zh-TW", {
                   month: "2-digit", day: "2-digit",
                   hour: "2-digit", minute: "2-digit",
@@ -198,14 +198,14 @@ export default function EmailsPage() {
               {/* Subject + sender */}
               <div style={{ minWidth: 0 }}>
                 <div style={{
-                  fontSize: 13, color: "var(--fg)", fontWeight: 450,
+                  fontSize: 13, color: "var(--gray-12)", fontWeight: 450,
                   whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis",
                   display: "flex", alignItems: "center", gap: 5,
                 }}>
                   {email.subject}
-                  {email.has_attachments && <Paperclip size={11} color="var(--fg-subtle)" />}
+                  {email.has_attachments && <Paperclip size={11} color="var(--gray-9)" />}
                 </div>
-                <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: 2 }}>
+                <div style={{ fontSize: 11, color: "var(--gray-9)", marginTop: 2 }}>
                   {email.sender_name} &lt;{email.sender_email}&gt;
                 </div>
               </div>
@@ -214,20 +214,20 @@ export default function EmailsPage() {
               <div><DirectionBadge code={email.direction_code} /></div>
 
               {/* Case numbers */}
-              <div style={{ fontSize: 11, color: "var(--fg-muted)", display: "flex", flexWrap: "wrap", gap: 3 }}>
+              <div style={{ fontSize: 11, color: "var(--gray-11)", display: "flex", flexWrap: "wrap", gap: 3 }}>
                 {email.case_numbers.length === 0 ? (
-                  <span style={{ color: "var(--fg-subtle)" }}>—</span>
+                  <span style={{ color: "var(--gray-9)" }}>—</span>
                 ) : (
                   email.case_numbers.slice(0, 2).map((c) => (
                     <span key={c} style={{
                       padding: "1px 5px", borderRadius: 3, fontSize: 10,
-                      background: "var(--sl3)", border: "1px solid var(--border)",
+                      background: "var(--gray-3)", border: "1px solid var(--gray-6)",
                       fontFamily: "ui-monospace, monospace",
                     }}>{c}</span>
                   ))
                 )}
                 {email.case_numbers.length > 2 && (
-                  <span style={{ color: "var(--fg-subtle)", fontSize: 10 }}>+{email.case_numbers.length - 2}</span>
+                  <span style={{ color: "var(--gray-9)", fontSize: 10 }}>+{email.case_numbers.length - 2}</span>
                 )}
               </div>
 
@@ -238,7 +238,7 @@ export default function EmailsPage() {
               <div><ConfidenceBar value={email.confidence} /></div>
 
               {/* Arrow */}
-              <div style={{ color: "var(--fg-subtle)", fontSize: 12 }}>›</div>
+              <div style={{ color: "var(--gray-9)", fontSize: 12 }}>›</div>
             </Link>
           ))
         )}
@@ -247,18 +247,18 @@ export default function EmailsPage() {
       {/* Pagination */}
       {totalPages > 1 && (
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14 }}>
-          <span style={{ fontSize: 12, color: "var(--fg-subtle)" }}>
+          <span style={{ fontSize: 12, color: "var(--gray-9)" }}>
             第 {page} / {totalPages} 頁，共 {total} 筆
           </span>
           <div style={{ display: "flex", gap: 6 }}>
-            <button className="btn-outline" disabled={page === 1}
-              onClick={() => setPage((p) => p - 1)} style={{ height: 28, padding: "0 10px", fontSize: 12 }}>
+            <Button variant="outline" color="gray" disabled={page === 1}
+              onClick={() => setPage((p) => p - 1)} size="1" style={{ cursor: page === 1 ? "not-allowed" : "pointer" }}>
               上一頁
-            </button>
-            <button className="btn-outline" disabled={page === totalPages}
-              onClick={() => setPage((p) => p + 1)} style={{ height: 28, padding: "0 10px", fontSize: 12 }}>
+            </Button>
+            <Button variant="outline" color="gray" disabled={page === totalPages}
+              onClick={() => setPage((p) => p + 1)} size="1" style={{ cursor: page === totalPages ? "not-allowed" : "pointer" }}>
               下一頁
-            </button>
+            </Button>
           </div>
         </div>
       )}

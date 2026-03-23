@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import { BookOpen, Cpu, Search } from "lucide-react";
 import type { RuleGroup } from "@/app/api/v1/rules/route";
 import { Loading } from "@/components/loading";
+import { Badge, Button, Text, Box, Flex, TextField } from "@radix-ui/themes";
 
 export default function RulesPage() {
   const [groups, setGroups]   = useState<RuleGroup[]>([]);
@@ -39,58 +40,59 @@ export default function RulesPage() {
     <div style={{ padding: "24px 28px", maxWidth: 1000 }}>
 
       {/* Toolbar */}
-      <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
-        <div style={{
-          display: "flex", alignItems: "center", gap: 6,
-          border: "1px solid var(--border)", borderRadius: 6,
-          padding: "5px 10px", background: "var(--bg)", minWidth: 220,
+      <Flex gap="3" mb="4" align="center" wrap="wrap">
+        <Flex align="center" gap="2" style={{
+          border: "1px solid var(--gray-6)", borderRadius: 6,
+          padding: "5px 10px", background: "var(--color-background)", minWidth: 220,
         }}>
-          <Search size={13} color="var(--fg-subtle)" />
+          <Search size={13} color="var(--gray-8)" />
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="搜尋規則…"
+            placeholder="搜尋規則..."
             style={{
               border: "none", outline: "none", fontSize: 13, background: "transparent",
-              color: "var(--fg)", flex: 1,
+              color: "var(--gray-12)", flex: 1,
             }}
           />
-        </div>
+        </Flex>
 
-        <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
-          <button
+        <Flex gap="1" wrap="wrap">
+          <Button
+            variant={activeCategory === "all" ? "solid" : "ghost"}
+            color={activeCategory === "all" ? "green" : "gray"}
+            size="1"
             onClick={() => setActiveCategory("all")}
-            className={`tab-link${activeCategory === "all" ? " active" : ""}`}
-            style={{ fontSize: 12, padding: "4px 10px" }}
           >
             全部
-          </button>
+          </Button>
           {groups.map((g) => (
-            <button
+            <Button
               key={g.category}
+              variant={activeCategory === g.category ? "solid" : "ghost"}
+              color={activeCategory === g.category ? "green" : "gray"}
+              size="1"
               onClick={() => setActiveCategory(g.category === activeCategory ? "all" : g.category)}
-              className={`tab-link${activeCategory === g.category ? " active" : ""}`}
-              style={{ fontSize: 12, padding: "4px 10px" }}
             >
               {g.label}
-            </button>
+            </Button>
           ))}
-        </div>
-      </div>
+        </Flex>
+      </Flex>
 
       {/* Rules */}
       {loading ? (
         <Loading />
       ) : filteredGroups.length === 0 ? (
-        <div style={{ padding: 40, textAlign: "center", color: "var(--fg-subtle)", fontSize: 13 }}>
+        <Box py="9" style={{ textAlign: "center", color: "var(--gray-8)", fontSize: 13 }}>
           沒有符合的規則
-        </div>
+        </Box>
       ) : (
-        <div style={{ display: "flex", flexDirection: "column", gap: 20 }}>
+        <Flex direction="column" gap="5">
           {filteredGroups.map((group) => (
             <CategorySection key={group.category} group={group} />
           ))}
-        </div>
+        </Flex>
       )}
     </div>
   );
@@ -98,24 +100,19 @@ export default function RulesPage() {
 
 function CategorySection({ group }: { group: RuleGroup }) {
   return (
-    <div style={{ border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
+    <Box style={{ border: "1px solid var(--gray-6)", borderRadius: 10, overflow: "hidden" }}>
       {/* Category header */}
-      <div style={{
+      <Flex align="center" gap="2" style={{
         background: group.titleColor,
         padding: "10px 14px",
-        display: "flex", alignItems: "center", gap: 8,
       }}>
-        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--fg)", letterSpacing: 0.2 }}>
+        <Text size="1" weight="bold" style={{ color: "var(--gray-12)", letterSpacing: 0.2 }}>
           {group.label}
-        </span>
-        <span style={{
-          fontSize: 11, color: "var(--fg-muted)",
-          background: "rgba(255,255,255,0.55)", borderRadius: 4,
-          padding: "1px 6px",
-        }}>
+        </Text>
+        <Badge variant="soft" color="gray" size="1">
           {group.rules.length} 條
-        </span>
-      </div>
+        </Badge>
+      </Flex>
 
       {/* Column headers */}
       <div style={{
@@ -124,8 +121,8 @@ function CategorySection({ group }: { group: RuleGroup }) {
         gap: 0,
         padding: "6px 14px",
         background: group.color,
-        borderBottom: "1px solid var(--border)",
-        fontSize: 11, fontWeight: 600, color: "var(--fg-muted)",
+        borderBottom: "1px solid var(--gray-6)",
+        fontSize: 11, fontWeight: 600, color: "var(--gray-9)",
       }}>
         <div>規則 ID</div>
         <div>觸發條件</div>
@@ -143,67 +140,54 @@ function CategorySection({ group }: { group: RuleGroup }) {
             gridTemplateColumns: "56px 1fr 1fr 1fr 72px",
             gap: 0,
             padding: "9px 14px",
-            background: idx % 2 === 0 ? group.color : "var(--bg)",
-            borderBottom: idx < group.rules.length - 1 ? "1px solid var(--border)" : "none",
+            background: idx % 2 === 0 ? group.color : "var(--color-background)",
+            borderBottom: idx < group.rules.length - 1 ? "1px solid var(--gray-6)" : "none",
             alignItems: "start",
           }}
         >
           {/* ID badge */}
           <div style={{ paddingTop: 1 }}>
-            <span style={{
-              display: "inline-block",
-              fontSize: 11, fontWeight: 700, letterSpacing: 0.5,
+            <Badge variant="soft" size="1" style={{
               background: group.titleColor,
-              padding: "2px 6px", borderRadius: 4,
-              color: "var(--fg)",
+              color: "var(--gray-12)",
+              fontWeight: 700,
+              letterSpacing: 0.5,
             }}>
               {rule.id}
-            </span>
+            </Badge>
           </div>
 
           {/* Trigger */}
-          <div style={{ fontSize: 12, color: "var(--fg)", lineHeight: 1.6, paddingRight: 12 }}>
+          <Text size="1" style={{ color: "var(--gray-12)", lineHeight: 1.6, paddingRight: 12 }}>
             {rule.trigger}
-          </div>
+          </Text>
 
           {/* Action */}
-          <div style={{ fontSize: 12, color: "var(--fg)", lineHeight: 1.6, paddingRight: 12 }}>
+          <Text size="1" style={{ color: "var(--gray-12)", lineHeight: 1.6, paddingRight: 12 }}>
             {rule.action}
-          </div>
+          </Text>
 
           {/* Example */}
-          <div style={{ fontSize: 11, color: "var(--fg-muted)", lineHeight: 1.6, paddingRight: 8 }}>
-            {rule.example || <span style={{ color: "var(--sl7)" }}>—</span>}
-          </div>
+          <Text size="1" style={{ color: "var(--gray-9)", lineHeight: 1.6, paddingRight: 8 }}>
+            {rule.example || <span style={{ color: "var(--gray-7)" }}>&mdash;</span>}
+          </Text>
 
           {/* Source */}
-          <div style={{ display: "flex", justifyContent: "center", paddingTop: 1 }}>
+          <Flex justify="center" style={{ paddingTop: 1 }}>
             {rule.source === "learned" ? (
-              <span style={{
-                display: "inline-flex", alignItems: "center", gap: 3,
-                fontSize: 10, fontWeight: 500,
-                background: "#FFF8E1", color: "#795548",
-                border: "1px solid #FFE082",
-                padding: "2px 6px", borderRadius: 4,
-              }}>
+              <Badge variant="soft" color="amber" size="1">
                 <Cpu size={9} />
                 學習
-              </span>
+              </Badge>
             ) : (
-              <span style={{
-                display: "inline-flex", alignItems: "center", gap: 3,
-                fontSize: 10, fontWeight: 500,
-                background: "var(--sl3)", color: "var(--fg-muted)",
-                border: "1px solid var(--border)",
-                padding: "2px 6px", borderRadius: 4,
-              }}>
+              <Badge variant="soft" color="gray" size="1">
                 <BookOpen size={9} />
                 系統
-              </span>
+              </Badge>
             )}
-          </div>
+          </Flex>
         </div>
       ))}
-    </div>
+    </Box>
   );
 }

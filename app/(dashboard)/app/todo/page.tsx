@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { Badge, Button, IconButton, Separator } from "@radix-ui/themes";
 import {
   CheckCircle2, Circle, ChevronDown, ChevronUp,
   Clock, Hash, Mail, AlertTriangle, ArrowRight,
@@ -22,9 +23,9 @@ const DIRECTION_CONFIG = {
 };
 
 const PRIORITY_CONFIG = {
-  urgent: { label: "急",   color: "#dc2626", bg: "#fef2f2" },
-  normal: { label: "一般", color: "#d97706", bg: "#fffbeb" },
-  low:    { label: "低",   color: "#6b7280", bg: "#f9fafb" },
+  urgent: { label: "急",   color: "red"   as const },
+  normal: { label: "一般", color: "amber" as const },
+  low:    { label: "低",   color: "gray"  as const },
 };
 
 type Party = "我方" | "客戶" | "代理人" | "政府機關";
@@ -44,13 +45,12 @@ function daysUntil(iso?: string) {
 function DeadlineBadge({ iso }: { iso?: string }) {
   const days = daysUntil(iso);
   if (days === null) return null;
-  const color = days <= 7 ? "#dc2626" : days <= 21 ? "#d97706" : "#6b7280";
-  const bg    = days <= 7 ? "#fef2f2" : days <= 21 ? "#fffbeb" : "var(--sl2)";
+  const badgeColor = days <= 7 ? "red" as const : days <= 21 ? "amber" as const : "gray" as const;
   return (
-    <span style={{ fontSize: 11, fontWeight: 600, color, background: bg, padding: "2px 7px", borderRadius: 4, display: "flex", alignItems: "center", gap: 3 }}>
+    <Badge variant="soft" color={badgeColor} size="1" style={{ display: "flex", alignItems: "center", gap: 3, fontSize: 11 }}>
       {days <= 0 ? <AlertTriangle size={10} /> : <Clock size={10} />}
       {days <= 0 ? `逾期 ${Math.abs(days)} 天` : `${days} 天後截止`}
-    </span>
+    </Badge>
   );
 }
 
@@ -132,17 +132,17 @@ export default function TodoPage() {
           {/* Header badges */}
           <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 14 }}>
             {urgentCount > 0 && (
-              <span style={{ fontSize: 11, fontWeight: 700, color: "#dc2626", background: "#fef2f2", padding: "2px 8px", borderRadius: 10, border: "1px solid #fecaca" }}>
+              <Badge variant="soft" color="red" size="1" style={{ fontWeight: 700 }}>
                 {urgentCount} 件急
-              </span>
+              </Badge>
             )}
-            <span style={{ fontSize: 12, color: "var(--fg-subtle)", display: "flex", alignItems: "center", gap: 5 }}>
-              <Bot size={13} color="#6366f1" />AI 從信件自動抽取下一步
+            <span style={{ fontSize: 12, color: "var(--gray-11)", display: "flex", alignItems: "center", gap: 5 }}>
+              <Bot size={13} color="var(--green-9)" />AI 從信件自動抽取下一步
             </span>
           </div>
 
           {/* Status tabs */}
-          <div style={{ display: "flex", gap: 2, marginBottom: 14, borderBottom: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", gap: 2, marginBottom: 14, borderBottom: "1px solid var(--gray-6)" }}>
             {([
               ["all", "全部"],
               ["pending", "待處理"],
@@ -151,16 +151,17 @@ export default function TodoPage() {
             ] as const).map(([key, label]) => (
               <button key={key} onClick={() => setFilter(key)} style={{
                 padding: "7px 14px", fontSize: 13, fontWeight: filter === key ? 600 : 400,
-                color: filter === key ? "var(--fg)" : "var(--fg-muted)",
+                color: filter === key ? "var(--gray-12)" : "var(--gray-11)",
                 background: "none", border: "none", cursor: "pointer",
-                borderBottom: filter === key ? "2px solid var(--fg)" : "2px solid transparent",
+                borderBottom: filter === key ? "2px solid var(--gray-12)" : "2px solid transparent",
                 marginBottom: -1, display: "flex", alignItems: "center", gap: 5,
+                transition: "color 0.12s, border-color 0.12s",
               }}>
                 {label}
                 <span style={{
                   fontSize: 11, fontWeight: 600, minWidth: 18, textAlign: "center",
-                  background: filter === key ? "var(--fg)" : "var(--sl4)",
-                  color: filter === key ? "var(--bg)" : "var(--fg-muted)",
+                  background: filter === key ? "var(--gray-12)" : "var(--gray-4)",
+                  color: filter === key ? "var(--color-background)" : "var(--gray-11)",
                   padding: "0 5px", borderRadius: 8,
                 }}>{counts[key]}</span>
               </button>
@@ -169,8 +170,8 @@ export default function TodoPage() {
 
           {/* Direction filter */}
           <div style={{ display: "flex", gap: 5, marginBottom: 16, alignItems: "center" }}>
-            <Filter size={12} color="var(--fg-subtle)" />
-            <span style={{ fontSize: 12, color: "var(--fg-subtle)", marginRight: 4 }}>動作類型：</span>
+            <Filter size={12} color="var(--gray-9)" />
+            <span style={{ fontSize: 12, color: "var(--gray-9)", marginRight: 4 }}>動作類型：</span>
             {([
               ["all", "全部"],
               ["review", "我方審閱"],
@@ -178,20 +179,23 @@ export default function TodoPage() {
               ["internal", "內部確認"],
               ["wait", "等待中"],
             ] as const).map(([key, label]) => (
-              <button key={key} onClick={() => setDirFilter(key)} style={{
-                fontSize: 11, padding: "3px 10px", borderRadius: 5, cursor: "pointer",
-                fontWeight: dirFilter === key ? 600 : 400,
-                background: dirFilter === key ? "var(--fg)" : "var(--sl2)",
-                color: dirFilter === key ? "var(--bg)" : "var(--fg-muted)",
-                border: "1px solid var(--border)",
-              }}>{label}</button>
+              <Button
+                key={key}
+                variant={dirFilter === key ? "solid" : "outline"}
+                color={dirFilter === key ? "green" : "gray"}
+                size="1"
+                onClick={() => setDirFilter(key)}
+                style={{ fontSize: 11, cursor: "pointer" }}
+              >
+                {label}
+              </Button>
             ))}
           </div>
 
           {/* Todo list */}
           <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
             {items.length === 0 && (
-              <div style={{ padding: "40px", textAlign: "center", color: "var(--fg-subtle)", fontSize: 13 }}>
+              <div style={{ padding: "40px", textAlign: "center", color: "var(--gray-9)", fontSize: 13 }}>
                 沒有符合條件的待辦事項
               </div>
             )}
@@ -208,12 +212,12 @@ export default function TodoPage() {
                 <div
                   key={item.id}
                   style={{
-                    border: `1px solid ${emailOpen ? "#a5b4fc" : isDone ? "var(--border)" : item.priority === "urgent" ? "#fca5a5" : "var(--border)"}`,
+                    border: `1px solid ${emailOpen ? "var(--green-7)" : isDone ? "var(--gray-6)" : item.priority === "urgent" ? "var(--red-7)" : "var(--gray-6)"}`,
                     borderRadius: 10,
-                    background: isDone ? "var(--sl1)" : "var(--bg)",
+                    background: isDone ? "var(--gray-2)" : "var(--color-background)",
                     overflow: "hidden",
                     opacity: isDone ? 0.55 : 1,
-                    transition: "opacity 0.2s, border-color 0.15s",
+                    transition: "opacity 0.2s, border-color 0.12s",
                   }}
                 >
                   {/* Main row */}
@@ -221,7 +225,7 @@ export default function TodoPage() {
                     {/* Checkbox */}
                     <button
                       onClick={() => toggleDone(item.id)}
-                      style={{ background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 1, flexShrink: 0, color: isDone ? "#16a34a" : "var(--fg-subtle)" }}
+                      style={{ background: "none", border: "none", cursor: "pointer", padding: 0, marginTop: 1, flexShrink: 0, color: isDone ? "var(--green-9)" : "var(--gray-9)" }}
                       title={isDone ? "標記未完成" : "標記完成"}
                     >
                       {isDone ? <CheckCircle2 size={18} /> : <Circle size={18} />}
@@ -230,89 +234,84 @@ export default function TodoPage() {
                     {/* Content */}
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 5, flexWrap: "wrap" }}>
-                        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 700, fontFamily: "ui-monospace, monospace", color: "var(--fg)", background: "var(--sl2)", padding: "2px 8px", borderRadius: 4, border: "1px solid var(--border)" }}>
+                        <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, fontWeight: 700, fontFamily: "ui-monospace, monospace", color: "var(--gray-12)", background: "var(--gray-3)", padding: "2px 8px", borderRadius: 4, border: "1px solid var(--gray-6)" }}>
                           <Hash size={10} />{item.case_number}
                         </span>
-                        <span style={{ fontSize: 12, color: "var(--fg-muted)" }}>{item.client}</span>
-                        <span style={{ fontSize: 10, fontWeight: 700, color: priConf.color, background: priConf.bg, padding: "1px 6px", borderRadius: 4 }}>{priConf.label}</span>
-                        <span style={{ fontSize: 11, fontWeight: 600, color: dirConf.color, background: dirConf.bg, padding: "2px 7px", borderRadius: 4, display: "flex", alignItems: "center", gap: 3 }}>
+                        <span style={{ fontSize: 12, color: "var(--gray-11)" }}>{item.client}</span>
+                        <Badge variant="soft" color={priConf.color} size="1">{priConf.label}</Badge>
+                        <Badge variant="soft" color="gray" size="1" style={{ display: "flex", alignItems: "center", gap: 3 }}>
                           <DirIcon size={10} />{dirConf.label}
-                        </span>
-                        <span style={{ fontSize: 11, color: "var(--fg-muted)", display: "flex", alignItems: "center", gap: 3 }}>
+                        </Badge>
+                        <span style={{ fontSize: 11, color: "var(--gray-11)", display: "flex", alignItems: "center", gap: 3 }}>
                           {WHO_ICON[item.who as Party]}{item.who}
                         </span>
                         <DeadlineBadge iso={item.deadline} />
                       </div>
-                      <div style={{ fontSize: 14, fontWeight: isDone ? 400 : 600, color: isDone ? "var(--fg-muted)" : "var(--fg)", lineHeight: 1.4, textDecoration: isDone ? "line-through" : "none", marginBottom: 5 }}>
+                      <div style={{ fontSize: 14, fontWeight: isDone ? 400 : 600, color: isDone ? "var(--gray-11)" : "var(--gray-12)", lineHeight: 1.4, textDecoration: isDone ? "line-through" : "none", marginBottom: 5 }}>
                         {item.action}
                       </div>
                       <div style={{ display: "flex", gap: 4, flexWrap: "wrap" }}>
                         {item.tags.map(tag => (
-                          <span key={tag} style={{ fontSize: 10, color: "var(--fg-subtle)", background: "var(--sl3)", padding: "1px 6px", borderRadius: 3, border: "1px solid var(--border)" }}>{tag}</span>
+                          <Badge key={tag} variant="outline" color="gray" size="1" style={{ fontSize: 10 }}>{tag}</Badge>
                         ))}
                       </div>
                     </div>
 
                     {/* Expand button */}
-                    <button onClick={() => toggleExpand(item.id)} className="btn-ghost" style={{ padding: "4px 6px", flexShrink: 0, marginTop: 2 }}>
+                    <IconButton variant="ghost" color="gray" size="1" onClick={() => toggleExpand(item.id)} style={{ flexShrink: 0, marginTop: 2, cursor: "pointer" }}>
                       {isExp ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                    </button>
+                    </IconButton>
                   </div>
 
                   {/* Expanded detail */}
                   {isExp && (
-                    <div style={{ borderTop: "1px solid var(--border)", background: "var(--sl1)" }}>
+                    <div style={{ borderTop: "1px solid var(--gray-6)", background: "var(--gray-2)" }}>
                       {item.detail && (
                         <div style={{ padding: "12px 16px 0" }}>
-                          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 5 }}>狀況說明</div>
-                          <p style={{ fontSize: 13, color: "var(--fg)", lineHeight: 1.7, margin: 0 }}>{item.detail}</p>
+                          <div style={{ fontSize: 11, fontWeight: 600, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 5 }}>狀況說明</div>
+                          <p style={{ fontSize: 13, color: "var(--gray-12)", lineHeight: 1.7, margin: 0 }}>{item.detail}</p>
                         </div>
                       )}
 
                       {item.ai_suggestion && (
-                        <div style={{ margin: "12px 16px 0", padding: "8px 12px", background: "#eef2ff", borderRadius: 7, borderLeft: "3px solid #6366f1", display: "flex", gap: 7, alignItems: "flex-start" }}>
-                          <Bot size={13} color="#6366f1" style={{ marginTop: 2, flexShrink: 0 }} />
-                          <p style={{ fontSize: 12, color: "#3730a3", margin: 0, lineHeight: 1.6 }}>{item.ai_suggestion}</p>
+                        <div style={{ margin: "12px 16px 0", padding: "8px 12px", background: "var(--green-2)", borderRadius: 7, borderLeft: "3px solid var(--green-9)", display: "flex", gap: 7, alignItems: "flex-start" }}>
+                          <Bot size={13} color="var(--green-9)" style={{ marginTop: 2, flexShrink: 0 }} />
+                          <p style={{ fontSize: 12, color: "var(--green-11)", margin: 0, lineHeight: 1.6 }}>{item.ai_suggestion}</p>
                         </div>
                       )}
 
                       {/* Source email row */}
                       <div style={{ padding: "12px 16px", display: "flex", alignItems: "center", gap: 10, flexWrap: "wrap" }}>
                         {/* 展開信件 button */}
-                        <button
+                        <Button
+                          variant={emailOpen ? "soft" : "outline"}
+                          color={emailOpen ? "green" : "gray"}
+                          size="1"
                           onClick={() => openEmail(item.source_email_id)}
-                          style={{
-                            display: "flex", alignItems: "center", gap: 5, fontSize: 12,
-                            color: emailOpen ? "#4338ca" : "var(--fg-muted)", textDecoration: "none",
-                            border: `1px solid ${emailOpen ? "#a5b4fc" : "var(--border)"}`,
-                            background: emailOpen ? "#eef2ff" : "var(--bg)",
-                            padding: "5px 10px", borderRadius: 5, cursor: "pointer",
-                            fontWeight: emailOpen ? 600 : 400,
-                          }}
+                          style={{ cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
                         >
                           <Mail size={11} />
                           <span style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.source_subject}</span>
                           <ChevronRight size={11} style={{ transform: emailOpen ? "rotate(90deg)" : "none", transition: "transform 0.15s" }} />
-                        </button>
+                        </Button>
 
-                        <span style={{ fontSize: 11, color: "var(--fg-subtle)" }}>
+                        <span style={{ fontSize: 11, color: "var(--gray-9)" }}>
                           {new Date(item.source_date).toLocaleDateString("zh-TW", { month: "2-digit", day: "2-digit" })}
                         </span>
                         {item.deadline && (
-                          <span style={{ fontSize: 11, color: "var(--fg-subtle)", display: "flex", alignItems: "center", gap: 4 }}>
+                          <span style={{ fontSize: 11, color: "var(--gray-9)", display: "flex", alignItems: "center", gap: 4 }}>
                             <Clock size={11} />截止：{new Date(item.deadline).toLocaleDateString("zh-TW", { month: "long", day: "numeric" })}
                           </span>
                         )}
-                        <button
+                        <Button
+                          variant={isDone ? "outline" : "solid"}
+                          color={isDone ? "gray" : "green"}
+                          size="1"
                           onClick={() => toggleDone(item.id)}
-                          style={{
-                            marginLeft: "auto", fontSize: 12, fontWeight: 600, padding: "5px 14px", borderRadius: 6, cursor: "pointer",
-                            background: isDone ? "var(--sl3)" : "#166534", color: isDone ? "var(--fg-muted)" : "#fff",
-                            border: isDone ? "1px solid var(--border)" : "none", display: "flex", alignItems: "center", gap: 5,
-                          }}
+                          style={{ marginLeft: "auto", cursor: "pointer", display: "flex", alignItems: "center", gap: 5 }}
                         >
                           {isDone ? <><RotateCcw size={11} />取消完成</> : <><CheckCircle2 size={11} />標記完成</>}
-                        </button>
+                        </Button>
                       </div>
                     </div>
                   )}
@@ -327,8 +326,8 @@ export default function TodoPage() {
       <div style={{
         width: emailPanelId ? panelWidth : 0,
         overflow: "hidden",
-        borderLeft: emailPanelId ? "1px solid var(--border)" : "none",
-        background: "var(--bg)",
+        borderLeft: emailPanelId ? "1px solid var(--gray-6)" : "none",
+        background: "var(--color-background)",
         flexShrink: 0,
         display: "flex", flexDirection: "column",
         position: "relative",
@@ -341,7 +340,7 @@ export default function TodoPage() {
               position: "absolute", left: -3, top: 0, bottom: 0, width: 6,
               cursor: "col-resize", zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <div style={{ width: 2, height: 32, borderRadius: 2, background: "var(--sl7)", opacity: 0.5 }} />
+              <div style={{ width: 2, height: 32, borderRadius: 2, background: "var(--gray-7)", opacity: 0.5 }} />
             </div>
             <EmailDetailPanel
               emailId={emailPanelId}

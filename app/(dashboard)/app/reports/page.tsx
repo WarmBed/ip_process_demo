@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ChevronLeft, ChevronRight, TrendingUp, FileText, DollarSign, CheckCircle2 } from "lucide-react";
 import { MOCK_CASES, MOCK_STAFF, type CaseStatus } from "@/lib/mock-cases";
+import { Button, Badge } from "@radix-ui/themes";
 
 // ── Mock monthly data ──────────────────────────────────────────
 
@@ -36,10 +37,10 @@ function MiniBar({ value, max, color }: { value: number; max: number; color: str
   const pct = max > 0 ? Math.round((value / max) * 100) : 0;
   return (
     <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-      <div style={{ width: 80, height: 5, borderRadius: 3, background: "var(--sl4)", overflow: "hidden", flexShrink: 0 }}>
+      <div style={{ width: 80, height: 5, borderRadius: 3, background: "var(--gray-5)", overflow: "hidden", flexShrink: 0 }}>
         <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 3 }} />
       </div>
-      <span style={{ fontSize: 12, color: "var(--fg-muted)", minWidth: 20 }}>{value}</span>
+      <span style={{ fontSize: 12, color: "var(--gray-11)", minWidth: 20 }}>{value}</span>
     </div>
   );
 }
@@ -47,10 +48,10 @@ function MiniBar({ value, max, color }: { value: number; max: number; color: str
 // ── Case status distribution ───────────────────────────────────
 
 const STATUS_GROUPS: { label: string; statuses: CaseStatus[]; color: string }[] = [
-  { label: "進行中",  statuses: ["filed","under_examination","oa_issued","oa_responded"], color: "#2563eb" },
-  { label: "核准/獲證", statuses: ["allowed","granted"],                                 color: "#16a34a" },
-  { label: "駁回/放棄", statuses: ["rejected","abandoned"],                              color: "#9ca3af" },
-  { label: "異議/申訴", statuses: ["opposed","appealing"],                               color: "#d97706" },
+  { label: "進行中",  statuses: ["filed","under_examination","oa_issued","oa_responded"], color: "var(--green-9)" },
+  { label: "核准/獲證", statuses: ["allowed","granted"],                                 color: "var(--green-11)" },
+  { label: "駁回/放棄", statuses: ["rejected","abandoned"],                              color: "var(--gray-8)" },
+  { label: "異議/申訴", statuses: ["opposed","appealing"],                               color: "var(--gray-11)" },
 ];
 
 export default function ReportsPage() {
@@ -72,8 +73,8 @@ export default function ReportsPage() {
     trademark: "商標", copyright: "著作權",
   };
   const typeColors: Record<string, string> = {
-    invention: "#2563eb", utility_model: "#0891b2", design: "#7c3aed",
-    trademark: "#d97706", copyright: "#6b7280",
+    invention: "var(--green-9)", utility_model: "var(--green-7)", design: "var(--green-11)",
+    trademark: "var(--gray-10)", copyright: "var(--gray-8)",
   };
 
   // Status distribution
@@ -88,7 +89,7 @@ export default function ReportsPage() {
     EP: "歐洲", KR: "韓國",
   };
   const juriColors: Record<string, string> = {
-    TW: "#2563eb", US: "#dc2626", CN: "#d97706", JP: "#16a34a", EP: "#7c3aed", KR: "#0891b2",
+    TW: "var(--green-9)", US: "var(--gray-10)", CN: "var(--gray-8)", JP: "var(--green-11)", EP: "var(--green-7)", KR: "var(--gray-9)",
   };
 
   const maxJuri = Math.max(...Object.values(byJuri));
@@ -98,25 +99,31 @@ export default function ReportsPage() {
 
       {/* Month picker */}
       <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
-        <button
+        <Button
+          variant="ghost"
+          color="gray"
+          size="1"
           onClick={() => setMonthIdx(i => Math.max(0, i - 1))}
-          className="btn-ghost" style={{ padding: "4px 8px" }}
           disabled={monthIdx === 0}
+          style={{ cursor: monthIdx === 0 ? "default" : "pointer" }}
         >
           <ChevronLeft size={15} />
-        </button>
-        <span style={{ fontSize: 15, fontWeight: 600, color: "var(--fg)", minWidth: 140, textAlign: "center" }}>
+        </Button>
+        <span style={{ fontSize: 15, fontWeight: 600, color: "var(--gray-12)", minWidth: 140, textAlign: "center" }}>
           {fmtMonth(current.month)}
         </span>
-        <button
+        <Button
+          variant="ghost"
+          color="gray"
+          size="1"
           onClick={() => setMonthIdx(i => Math.min(MONTHLY_DATA.length - 1, i + 1))}
-          className="btn-ghost" style={{ padding: "4px 8px" }}
           disabled={monthIdx === MONTHLY_DATA.length - 1}
+          style={{ cursor: monthIdx === MONTHLY_DATA.length - 1 ? "default" : "pointer" }}
         >
           <ChevronRight size={15} />
-        </button>
+        </Button>
         {monthIdx === MONTHLY_DATA.length - 1 && (
-          <span style={{ fontSize: 11, color: "var(--fg-subtle)", marginLeft: 4 }}>最新</span>
+          <Badge variant="soft" color="green" size="1">最新</Badge>
         )}
       </div>
 
@@ -124,40 +131,40 @@ export default function ReportsPage() {
       <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 12, marginBottom: 24 }}>
         {[
           {
-            icon: <FileText size={14} color="#2563eb" />,
+            icon: <FileText size={14} color="var(--green-9)" />,
             label: "新增案件", value: current.new_cases,
             d: delta(current.new_cases, prev?.new_cases),
-            accent: "#2563eb",
+            accent: "var(--green-9)",
           },
           {
-            icon: <CheckCircle2 size={14} color="#16a34a" />,
+            icon: <CheckCircle2 size={14} color="var(--green-11)" />,
             label: "獲證 / 結案", value: current.granted,
             d: delta(current.granted, prev?.granted),
-            accent: "#16a34a",
+            accent: "var(--green-11)",
           },
           {
-            icon: <DollarSign size={14} color="#d97706" />,
+            icon: <DollarSign size={14} color="var(--gray-10)" />,
             label: "官費支出",
             value: `NT$ ${(current.official_fees / 1000).toFixed(0)}K`,
             d: delta(current.official_fees, prev?.official_fees),
-            accent: "#d97706",
+            accent: "var(--gray-11)",
             invertDelta: true,
           },
           {
-            icon: <TrendingUp size={14} color="#7c3aed" />,
+            icon: <TrendingUp size={14} color="var(--green-7)" />,
             label: "律師工時",
             value: `${current.attorney_hours} hrs`,
             d: delta(current.attorney_hours, prev?.attorney_hours),
-            accent: "#7c3aed",
+            accent: "var(--gray-11)",
           },
         ].map(({ icon, label, value, d, accent, invertDelta }) => (
           <div key={label} style={{
-            padding: "16px 20px", border: "1px solid var(--border)", borderRadius: 10,
-            background: "var(--bg)",
+            padding: "16px 20px", border: "1px solid var(--gray-6)", borderRadius: 10,
+            background: "var(--color-background)",
           }}>
             <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 10 }}>
               {icon}
-              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
+              <span style={{ fontSize: 11, fontWeight: 600, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.04em" }}>
                 {label}
               </span>
             </div>
@@ -165,7 +172,7 @@ export default function ReportsPage() {
               {value}
             </div>
             {d && (
-              <div style={{ fontSize: 11, marginTop: 6, color: (d.up !== !!invertDelta) ? "#16a34a" : "#dc2626" }}>
+              <div style={{ fontSize: 11, marginTop: 6, color: (d.up !== !!invertDelta) ? "var(--green-9)" : "var(--gray-10)" }}>
                 {d.up ? "▲" : "▼"} {d.value} vs 上月
               </div>
             )}
@@ -174,17 +181,17 @@ export default function ReportsPage() {
       </div>
 
       {/* Trend table: recent 6 months */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden", marginBottom: 24 }}>
-        <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", background: "var(--sl2)", display: "flex", alignItems: "center", gap: 6 }}>
-          <TrendingUp size={13} color="var(--fg-muted)" />
-          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>近 6 個月趨勢</span>
+      <div style={{ border: "1px solid var(--gray-6)", borderRadius: 8, overflow: "hidden", marginBottom: 24 }}>
+        <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--gray-6)", background: "var(--gray-2)", display: "flex", alignItems: "center", gap: 6 }}>
+          <TrendingUp size={13} color="var(--gray-11)" />
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--gray-12)" }}>近 6 個月趨勢</span>
         </div>
         <div style={{ overflowX: "auto" }}>
           <table style={{ width: "100%", borderCollapse: "collapse", fontSize: 12 }}>
             <thead>
-              <tr style={{ background: "var(--sl1)" }}>
+              <tr style={{ background: "var(--gray-2)" }}>
                 {["月份","新案","答辯","獲證","信件","官費","工時"].map(h => (
-                  <th key={h} style={{ padding: "7px 14px", textAlign: "left", color: "var(--fg-subtle)", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: "1px solid var(--border)", whiteSpace: "nowrap" }}>{h}</th>
+                  <th key={h} style={{ padding: "7px 14px", textAlign: "left", color: "var(--gray-9)", fontWeight: 600, fontSize: 11, textTransform: "uppercase", letterSpacing: "0.04em", borderBottom: "1px solid var(--gray-6)", whiteSpace: "nowrap" }}>{h}</th>
                 ))}
               </tr>
             </thead>
@@ -193,21 +200,21 @@ export default function ReportsPage() {
                 const isCurrent = m.month === current.month;
                 return (
                   <tr key={m.month} style={{
-                    background: isCurrent ? "var(--sl2)" : i % 2 === 0 ? "var(--bg)" : "var(--sl1)",
-                    borderBottom: "1px solid var(--border)",
+                    background: isCurrent ? "var(--gray-3)" : i % 2 === 0 ? "var(--color-background)" : "var(--gray-2)",
+                    borderBottom: "1px solid var(--gray-6)",
                   }}>
-                    <td style={{ padding: "9px 14px", fontWeight: isCurrent ? 700 : 400, color: isCurrent ? "var(--fg)" : "var(--fg-muted)", whiteSpace: "nowrap" }}>
+                    <td style={{ padding: "9px 14px", fontWeight: isCurrent ? 700 : 400, color: isCurrent ? "var(--gray-12)" : "var(--gray-11)", whiteSpace: "nowrap" }}>
                       {fmtMonth(m.month)}
-                      {isCurrent && <span style={{ fontSize: 10, marginLeft: 5, color: "#2563eb" }}>▶</span>}
+                      {isCurrent && <span style={{ fontSize: 10, marginLeft: 5, color: "var(--green-9)" }}>▶</span>}
                     </td>
-                    <td style={{ padding: "9px 14px", color: "var(--fg)" }}>{m.new_cases}</td>
-                    <td style={{ padding: "9px 14px", color: "var(--fg)" }}>{m.oa_filed}</td>
-                    <td style={{ padding: "9px 14px", color: m.granted > 0 ? "#16a34a" : "var(--fg-muted)", fontWeight: m.granted > 0 ? 600 : 400 }}>{m.granted}</td>
-                    <td style={{ padding: "9px 14px", color: "var(--fg-muted)" }}>{m.emails_processed}</td>
-                    <td style={{ padding: "9px 14px", color: "var(--fg-muted)", fontFamily: "ui-monospace, monospace" }}>
+                    <td style={{ padding: "9px 14px", color: "var(--gray-12)" }}>{m.new_cases}</td>
+                    <td style={{ padding: "9px 14px", color: "var(--gray-12)" }}>{m.oa_filed}</td>
+                    <td style={{ padding: "9px 14px", color: m.granted > 0 ? "var(--green-9)" : "var(--gray-11)", fontWeight: m.granted > 0 ? 600 : 400 }}>{m.granted}</td>
+                    <td style={{ padding: "9px 14px", color: "var(--gray-11)" }}>{m.emails_processed}</td>
+                    <td style={{ padding: "9px 14px", color: "var(--gray-11)", fontFamily: "ui-monospace, monospace" }}>
                       {(m.official_fees / 1000).toFixed(0)}K
                     </td>
-                    <td style={{ padding: "9px 14px", color: "var(--fg-muted)" }}>{m.attorney_hours}h</td>
+                    <td style={{ padding: "9px 14px", color: "var(--gray-11)" }}>{m.attorney_hours}h</td>
                   </tr>
                 );
               })}
@@ -220,9 +227,9 @@ export default function ReportsPage() {
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginBottom: 24 }}>
 
         {/* Case type distribution */}
-        <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-          <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", background: "var(--sl2)" }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>案件類型分佈</span>
+        <div style={{ border: "1px solid var(--gray-6)", borderRadius: 8, overflow: "hidden" }}>
+          <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--gray-6)", background: "var(--gray-2)" }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--gray-12)" }}>案件類型分佈</span>
           </div>
           <div style={{ padding: "16px" }}>
             {Object.entries(byType).sort((a,b) => b[1]-a[1]).map(([type, count]) => {
@@ -230,11 +237,11 @@ export default function ReportsPage() {
               return (
                 <div key={type} style={{ marginBottom: 12 }}>
                   <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                    <span style={{ fontSize: 12, color: "var(--fg)", fontWeight: 500 }}>{typeLabels[type] ?? type}</span>
-                    <span style={{ fontSize: 11, color: "var(--fg-subtle)" }}>{count} 件 ({pct}%)</span>
+                    <span style={{ fontSize: 12, color: "var(--gray-12)", fontWeight: 500 }}>{typeLabels[type] ?? type}</span>
+                    <span style={{ fontSize: 11, color: "var(--gray-9)" }}>{count} 件 ({pct}%)</span>
                   </div>
-                  <div style={{ height: 6, borderRadius: 3, background: "var(--sl4)", overflow: "hidden" }}>
-                    <div style={{ width: `${pct}%`, height: "100%", background: typeColors[type] ?? "#6b7280", borderRadius: 3 }} />
+                  <div style={{ height: 6, borderRadius: 3, background: "var(--gray-4)", overflow: "hidden" }}>
+                    <div style={{ width: `${pct}%`, height: "100%", background: typeColors[type] ?? "var(--gray-8)", borderRadius: 3 }} />
                   </div>
                 </div>
               );
@@ -243,18 +250,18 @@ export default function ReportsPage() {
         </div>
 
         {/* Jurisdiction distribution */}
-        <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-          <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", background: "var(--sl2)" }}>
-            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>申請國家分佈</span>
+        <div style={{ border: "1px solid var(--gray-6)", borderRadius: 8, overflow: "hidden" }}>
+          <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--gray-6)", background: "var(--gray-2)" }}>
+            <span style={{ fontSize: 13, fontWeight: 600, color: "var(--gray-12)" }}>申請國家分佈</span>
           </div>
           <div style={{ padding: "16px" }}>
             {Object.entries(byJuri).sort((a,b) => b[1]-a[1]).map(([j, count]) => (
               <div key={j} style={{ marginBottom: 12 }}>
                 <div style={{ display: "flex", justifyContent: "space-between", marginBottom: 4 }}>
-                  <span style={{ fontSize: 12, color: "var(--fg)", fontWeight: 500 }}>{juriLabels[j] ?? j}</span>
-                  <span style={{ fontSize: 11, color: "var(--fg-subtle)" }}>{count} 件</span>
+                  <span style={{ fontSize: 12, color: "var(--gray-12)", fontWeight: 500 }}>{juriLabels[j] ?? j}</span>
+                  <span style={{ fontSize: 11, color: "var(--gray-9)" }}>{count} 件</span>
                 </div>
-                <MiniBar value={count} max={maxJuri} color={juriColors[j] ?? "#6b7280"} />
+                <MiniBar value={count} max={maxJuri} color={juriColors[j] ?? "var(--gray-8)"} />
               </div>
             ))}
           </div>
@@ -262,9 +269,9 @@ export default function ReportsPage() {
       </div>
 
       {/* Status distribution */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-        <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--border)", background: "var(--sl2)" }}>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>案件狀態總覽</span>
+      <div style={{ border: "1px solid var(--gray-6)", borderRadius: 8, overflow: "hidden" }}>
+        <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--gray-6)", background: "var(--gray-2)" }}>
+          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--gray-12)" }}>案件狀態總覽</span>
         </div>
         <div style={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", padding: "16px", gap: 16 }}>
           {STATUS_GROUPS.map(({ label, statuses, color }) => {
@@ -273,9 +280,9 @@ export default function ReportsPage() {
             return (
               <div key={label} style={{ textAlign: "center" }}>
                 <div style={{ fontSize: 28, fontWeight: 700, color, letterSpacing: "-0.02em" }}>{count}</div>
-                <div style={{ fontSize: 12, color: "var(--fg)", marginTop: 3 }}>{label}</div>
-                <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: 2 }}>{pct}%</div>
-                <div style={{ height: 4, borderRadius: 2, background: "var(--sl4)", overflow: "hidden", marginTop: 8 }}>
+                <div style={{ fontSize: 12, color: "var(--gray-12)", marginTop: 3 }}>{label}</div>
+                <div style={{ fontSize: 11, color: "var(--gray-9)", marginTop: 2 }}>{pct}%</div>
+                <div style={{ height: 4, borderRadius: 2, background: "var(--gray-4)", overflow: "hidden", marginTop: 8 }}>
                   <div style={{ width: `${pct}%`, height: "100%", background: color, borderRadius: 2 }} />
                 </div>
               </div>

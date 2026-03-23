@@ -6,6 +6,7 @@ import {
   Clock, Mail, AlertCircle, CheckSquare, Bot, X, ChevronRight, ChevronDown,
   Check, FileText, User, Edit2, AlertTriangle, Folder,
 } from "lucide-react";
+import { Badge, Button, IconButton } from "@radix-ui/themes";
 import {
   MOCK_DEADLINES, MOCK_STAFF, MOCK_CASES,
   DEADLINE_TYPE_LABELS, STATUS_LABELS, TYPE_LABELS, JURISDICTION_LABELS,
@@ -39,32 +40,32 @@ type SelectedItem = { id: string; kind: SelectedKind };
 // ── Direction codes (收發碼) ───────────────────────────────────
 
 const DIR_CODES: Record<string, { label: string; desc: string; color: string; bg: string; border: string }> = {
-  FA: { label: "FA", desc: "我方 → 客戶",   color: "#1d4ed8", bg: "#eff6ff", border: "#bfdbfe" },
-  FC: { label: "FC", desc: "客戶 → 我方",   color: "#7c3aed", bg: "#f5f3ff", border: "#ddd6fe" },
-  TA: { label: "TA", desc: "我方 → 代理人", color: "#059669", bg: "#ecfdf5", border: "#a7f3d0" },
-  TC: { label: "TC", desc: "代理人 → 我方", color: "#d97706", bg: "#fffbeb", border: "#fde68a" },
-  FG: { label: "FG", desc: "官方 → 我方",   color: "#dc2626", bg: "#fef2f2", border: "#fecaca" },
-  TG: { label: "TG", desc: "我方 → 官方",   color: "#0891b2", bg: "#ecfeff", border: "#a5f3fc" },
-  FX: { label: "FX", desc: "其他 / 不明",   color: "#6b7280", bg: "#f9fafb", border: "#e5e7eb" },
+  FA: { label: "FA", desc: "我方 → 客戶",   color: "var(--blue-9)", bg: "var(--blue-2)", border: "var(--blue-6)" },
+  FC: { label: "FC", desc: "客戶 → 我方",   color: "var(--violet-9)", bg: "var(--violet-2)", border: "var(--violet-6)" },
+  TA: { label: "TA", desc: "我方 → 代理人", color: "var(--green-9)", bg: "var(--green-2)", border: "var(--green-6)" },
+  TC: { label: "TC", desc: "代理人 → 我方", color: "var(--orange-9)", bg: "var(--orange-2)", border: "var(--orange-6)" },
+  FG: { label: "FG", desc: "官方 → 我方",   color: "var(--red-9)", bg: "var(--red-2)", border: "var(--red-6)" },
+  TG: { label: "TG", desc: "我方 → 官方",   color: "var(--cyan-9)", bg: "var(--cyan-2)", border: "var(--cyan-6)" },
+  FX: { label: "FX", desc: "其他 / 不明",   color: "var(--gray-9)", bg: "var(--gray-2)", border: "var(--gray-6)" },
 };
 
 const DEADLINE_BADGE: Record<string, { fg: string; bg: string }> = {
-  oa_response:    { fg: "#92400e", bg: "#fffbeb" },
-  annuity:        { fg: "#5b21b6", bg: "#f5f3ff" },
-  filing:         { fg: "#1e40af", bg: "#eff6ff" },
-  grant_deadline: { fg: "#065f46", bg: "#ecfdf5" },
-  renewal:        { fg: "#9a3412", bg: "#fff7ed" },
-  appeal:         { fg: "#991b1b", bg: "#fef2f2" },
-  other:          { fg: "#374151", bg: "#f9fafb" },
+  oa_response:    { fg: "var(--orange-11)", bg: "var(--orange-2)" },
+  annuity:        { fg: "var(--violet-11)", bg: "var(--violet-2)" },
+  filing:         { fg: "var(--blue-11)", bg: "var(--blue-2)" },
+  grant_deadline: { fg: "var(--green-11)", bg: "var(--green-2)" },
+  renewal:        { fg: "var(--orange-11)", bg: "var(--orange-2)" },
+  appeal:         { fg: "var(--red-11)", bg: "var(--red-2)" },
+  other:          { fg: "var(--gray-11)", bg: "var(--gray-2)" },
 };
 
 const MAIL_CAT_COLOR: Record<string, { fg: string; bg: string }> = {
-  "OA答辯": { fg: "#92400e", bg: "#fffbeb" },
-  "領證費":  { fg: "#065f46", bg: "#ecfdf5" },
-  "領證":    { fg: "#065f46", bg: "#ecfdf5" },
-  "年費":    { fg: "#5b21b6", bg: "#f5f3ff" },
-  "待確認":  { fg: "#92400e", bg: "#fff7ed" },
-  "其他":    { fg: "#374151", bg: "#f9fafb" },
+  "OA答辯": { fg: "var(--orange-11)", bg: "var(--orange-2)" },
+  "領證費":  { fg: "var(--green-11)", bg: "var(--green-2)" },
+  "領證":    { fg: "var(--green-11)", bg: "var(--green-2)" },
+  "年費":    { fg: "var(--violet-11)", bg: "var(--violet-2)" },
+  "待確認":  { fg: "var(--orange-11)", bg: "var(--orange-2)" },
+  "其他":    { fg: "var(--gray-11)", bg: "var(--gray-2)" },
 };
 
 // ── Mock incoming official mail ────────────────────────────────
@@ -341,11 +342,11 @@ const AI_SUGGESTIONS: Record<string, string> = {
 function daysUntil(iso: string) {
   return Math.ceil((new Date(iso).getTime() - Date.now()) / 86400000);
 }
-function urgencyColor(d: number) { return d <= 7 ? "#dc2626" : d <= 30 ? "#d97706" : "var(--fg-muted)"; }
-function urgencyBorder(d: number) { return d <= 7 ? "#dc2626" : d <= 30 ? "#d97706" : "var(--border)"; }
+function urgencyColor(d: number) { return d <= 7 ? "var(--red-9)" : d <= 30 ? "var(--orange-9)" : "var(--gray-8)"; }
+function urgencyBorder(d: number) { return d <= 7 ? "var(--red-9)" : d <= 30 ? "var(--orange-9)" : "var(--gray-5)"; }
 function urgencyBg(d: number, sel: boolean) {
-  if (sel) return "#eef2ff";
-  return d <= 7 ? "#fef2f2" : "var(--bg)";
+  if (sel) return "var(--green-2)";
+  return d <= 7 ? "var(--red-2)" : "var(--color-background)";
 }
 
 // ── Storage provider icons ─────────────────────────────────────
@@ -377,9 +378,9 @@ function StorageIcon({ provider }: { provider: "gdrive" | "dropbox" | "onedrive"
 }
 
 function DriveFileIcon({ type }: { type: DriveItem["type"] }) {
-  const c = { folder: "#f59e0b", pdf: "#ef4444", doc: "#3b82f6", sheet: "#22c55e", img: "#a855f7" }[type];
+  const c: Record<string, string> = { folder: "var(--orange-9)", pdf: "var(--red-9)", doc: "var(--blue-9)", sheet: "var(--green-9)", img: "var(--violet-9)" };
   const I = type === "folder" ? Folder : FileText;
-  return <I size={12} color={c} />;
+  return <I size={12} color={c[type] ?? "var(--gray-8)"} />;
 }
 
 // ── Small UI components ────────────────────────────────────────
@@ -388,10 +389,10 @@ function StatCell({ label, value, sub, last = false }: {
   label: string; value: React.ReactNode; sub?: string; last?: boolean;
 }) {
   return (
-    <div style={{ flex: 1, padding: "14px 20px", borderRight: last ? "none" : "1px solid var(--border)" }}>
-      <div style={{ fontSize: 11, color: "var(--fg-subtle)", fontWeight: 500, marginBottom: 5 }}>{label}</div>
+    <div style={{ flex: 1, padding: "14px 20px", borderRight: last ? "none" : "1px solid var(--gray-5)" }}>
+      <div style={{ fontSize: 11, color: "var(--gray-9)", fontWeight: 500, marginBottom: 5 }}>{label}</div>
       <div style={{ fontSize: 18, fontWeight: 700, letterSpacing: "-0.02em", lineHeight: 1 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: 4 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 11, color: "var(--gray-9)", marginTop: 4 }}>{sub}</div>}
     </div>
   );
 }
@@ -402,24 +403,21 @@ function BlockHead({ icon, title, badge, badgeColor, linkHref, count }: {
 }) {
   return (
     <div style={{
-      padding: "9px 14px", borderBottom: "1px solid var(--border)",
+      padding: "9px 14px", borderBottom: "1px solid var(--gray-5)",
       display: "flex", alignItems: "center", justifyContent: "space-between",
-      background: "var(--sl2)",
+      background: "var(--gray-2)",
     }}>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
         {icon}
-        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg)" }}>{title}</span>
+        <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-12)" }}>{title}</span>
         {badge && (
-          <span style={{
-            fontSize: 10, fontWeight: 700, padding: "1px 6px", borderRadius: 10,
-            color: badgeColor ?? "#dc2626",
-            background: `${badgeColor ?? "#dc2626"}18`,
-            border: `1px solid ${badgeColor ?? "#dc2626"}40`,
-          }}>{badge}</span>
+          <Badge variant="soft" color={badgeColor === "var(--red-9)" || badgeColor === "#dc2626" ? "red" : badgeColor === "var(--blue-9)" || badgeColor === "#2563eb" ? "blue" : "orange"} size="1" style={{ fontWeight: 700 }}>
+            {badge}
+          </Badge>
         )}
       </div>
       {linkHref && count !== undefined && (
-        <Link href={linkHref} style={{ fontSize: 11, color: "var(--fg-muted)", textDecoration: "none", display: "flex", alignItems: "center", gap: 2 }}>
+        <Link href={linkHref} style={{ fontSize: 11, color: "var(--gray-8)", textDecoration: "none", display: "flex", alignItems: "center", gap: 2 }}>
           全部 {count} <ChevronRight size={10} />
         </Link>
       )}
@@ -432,10 +430,10 @@ function SectionHead({ title, collapsed, onToggle }: { title: string; collapsed:
     <button onClick={onToggle} style={{
       display: "flex", alignItems: "center", justifyContent: "space-between",
       width: "100%", padding: "8px 0 6px", border: "none", background: "none",
-      cursor: "pointer", borderBottom: "1px solid var(--border)", marginBottom: collapsed ? 0 : 10,
+      cursor: "pointer", borderBottom: "1px solid var(--gray-5)", marginBottom: collapsed ? 0 : 10,
     }}>
-      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{title}</span>
-      <ChevronDown size={10} color="var(--fg-subtle)" style={{ transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }} />
+      <span style={{ fontSize: 10, fontWeight: 700, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.05em" }}>{title}</span>
+      <ChevronDown size={10} color="var(--gray-8)" style={{ transform: collapsed ? "rotate(-90deg)" : "none", transition: "transform 0.15s", flexShrink: 0 }} />
     </button>
   );
 }
@@ -502,34 +500,32 @@ function DetailPanel({
 
       {/* Header */}
       <div style={{
-        padding: "12px 16px", borderBottom: "1px solid var(--border)",
-        background: "var(--sl2)", flexShrink: 0,
+        padding: "12px 16px", borderBottom: "1px solid var(--gray-5)",
+        background: "var(--gray-2)", flexShrink: 0,
       }}>
         <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
           <div style={{ flex: 1, minWidth: 0 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 4, flexWrap: "wrap" }}>
-              <span style={{
-                fontFamily: "ui-monospace, monospace", fontSize: 10, fontWeight: 700,
-                color: "var(--fg)", background: "var(--sl3)", border: "1px solid var(--border)",
-                padding: "2px 7px", borderRadius: 3,
-              }}>{caseNumber}</span>
+              <Badge variant="outline" color="gray" style={{ fontFamily: "ui-monospace, monospace", fontWeight: 700, fontSize: 10 }}>
+                {caseNumber}
+              </Badge>
               {patentCase && (
                 <>
-                  <span style={{ fontSize: 10, color: "var(--fg-subtle)", background: "var(--sl3)", padding: "2px 6px", borderRadius: 3, border: "1px solid var(--border)" }}>
+                  <Badge variant="soft" color="gray" style={{ fontSize: 10 }}>
                     {JURISDICTION_LABELS[patentCase.jurisdiction as keyof typeof JURISDICTION_LABELS]}
-                  </span>
-                  <span style={{ fontSize: 10, color: "var(--fg-subtle)", background: "var(--sl3)", padding: "2px 6px", borderRadius: 3, border: "1px solid var(--border)" }}>
+                  </Badge>
+                  <Badge variant="soft" color="gray" style={{ fontSize: 10 }}>
                     {TYPE_LABELS[patentCase.case_type]}
-                  </span>
+                  </Badge>
                 </>
               )}
             </div>
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)", lineHeight: 1.4, marginBottom: 2 }}>{title}</div>
-            <div style={{ fontSize: 11, color: "var(--fg-subtle)" }}>{clientName}</div>
+            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--gray-12)", lineHeight: 1.4, marginBottom: 2 }}>{title}</div>
+            <div style={{ fontSize: 11, color: "var(--gray-9)" }}>{clientName}</div>
           </div>
-          <button onClick={onClose} className="btn-ghost" style={{ padding: 4, flexShrink: 0 }}>
+          <IconButton variant="ghost" color="gray" size="1" onClick={onClose}>
             <X size={14} />
-          </button>
+          </IconButton>
         </div>
       </div>
 
@@ -540,13 +536,13 @@ function DetailPanel({
         {days !== null && (
           <div style={{
             marginBottom: 14, padding: "9px 12px", borderRadius: 4,
-            border: `1px solid ${days <= 7 ? "#fecaca" : days <= 30 ? "#fde68a" : "var(--border)"}`,
-            background: days <= 7 ? "#fef2f2" : days <= 30 ? "#fffbeb" : "var(--sl1)",
+            border: `1px solid ${days <= 7 ? "var(--red-6)" : days <= 30 ? "var(--orange-6)" : "var(--gray-5)"}`,
+            background: days <= 7 ? "var(--red-2)" : days <= 30 ? "var(--orange-2)" : "var(--gray-2)",
             display: "flex", alignItems: "center", gap: 7,
           }}>
             <Clock size={12} color={urgencyColor(days)} />
             <span style={{ fontSize: 12, fontWeight: 600, color: urgencyColor(days) }}>
-              {dueDateStr} · {days <= 0 ? `逾期 ${Math.abs(days)} 天` : `剩 ${days} 天`}
+              {dueDateStr} -- {days <= 0 ? `逾期 ${Math.abs(days)} 天` : `剩 ${days} 天`}
             </span>
           </div>
         )}
@@ -558,25 +554,25 @@ function DetailPanel({
             needsReview && !isReviewed ? (
               <div>
                 <div style={{
-                  padding: "10px 12px", background: "#fff7ed", borderLeft: "3px solid #f59e0b",
+                  padding: "10px 12px", background: "var(--orange-2)", borderLeft: "3px solid var(--orange-9)",
                   borderRadius: "0 4px 4px 0", display: "flex", gap: 8, marginBottom: 10,
                 }}>
-                  <AlertTriangle size={13} color="#d97706" style={{ flexShrink: 0, marginTop: 1 }} />
+                  <AlertTriangle size={13} color="var(--orange-9)" style={{ flexShrink: 0, marginTop: 1 }} />
                   <div>
-                    <p style={{ fontSize: 12, fontWeight: 600, color: "#92400e", margin: "0 0 3px" }}>
+                    <p style={{ fontSize: 12, fontWeight: 600, color: "var(--orange-11)", margin: "0 0 3px" }}>
                       AI 無法確定分類（信心度 {Math.round((incoming?.ai_confidence ?? 0) * 100)}%）
                     </p>
-                    <p style={{ fontSize: 11, color: "#b45309", margin: 0 }}>
-                      AI 推測：{incoming?.ai_category} · 需人工確認後方可分配處理
+                    <p style={{ fontSize: 11, color: "var(--orange-10)", margin: 0 }}>
+                      AI 推測：{incoming?.ai_category} -- 需人工確認後方可分配處理
                     </p>
                   </div>
                 </div>
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginBottom: 5 }}>確認收發碼</div>
+                  <div style={{ fontSize: 11, color: "var(--gray-9)", marginBottom: 5 }}>確認收發碼</div>
                   <select
                     value={reviewCode[id] ?? "FG"}
                     onChange={e => setReviewCode(id, e.target.value)}
-                    style={{ width: "100%", padding: "6px 10px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 4, background: "var(--bg)", color: "var(--fg)", outline: "none" }}
+                    style={{ width: "100%", padding: "6px 10px", fontSize: 12, border: "1px solid var(--gray-5)", borderRadius: 4, background: "var(--color-background)", color: "var(--gray-12)", outline: "none" }}
                   >
                     {Object.entries(DIR_CODES).map(([k, v]) => (
                       <option key={k} value={k}>{v.label} — {v.desc}</option>
@@ -584,59 +580,59 @@ function DetailPanel({
                   </select>
                 </div>
                 <div style={{ marginBottom: 8 }}>
-                  <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginBottom: 5 }}>確認原因（選填，幫助 AI 學習）</div>
+                  <div style={{ fontSize: 11, color: "var(--gray-9)", marginBottom: 5 }}>確認原因（選填，幫助 AI 學習）</div>
                   <textarea
                     value={reviewReason[id] ?? ""}
                     onChange={e => setReviewReason(id, e.target.value)}
                     placeholder="例：此類中國 OA 固定為 FG 來文..."
                     rows={2}
-                    style={{ width: "100%", padding: "6px 8px", fontSize: 11, border: "1px solid var(--border)", borderRadius: 4, background: "var(--bg)", color: "var(--fg)", outline: "none", resize: "none", boxSizing: "border-box" }}
+                    style={{ width: "100%", padding: "6px 8px", fontSize: 11, border: "1px solid var(--gray-5)", borderRadius: 4, background: "var(--color-background)", color: "var(--gray-12)", outline: "none", resize: "none", boxSizing: "border-box" }}
                   />
                 </div>
-                <button
+                <Button
                   onClick={() => onReviewConfirm(id)}
-                  style={{ width: "100%", padding: "7px", fontSize: 12, fontWeight: 600, borderRadius: 4, border: "none", background: "#166534", color: "#fff", cursor: "pointer" }}
+                  variant="solid" color="green" style={{ width: "100%", cursor: "pointer" }}
+                  size="2"
                 >
-                  <Check size={12} style={{ display: "inline", verticalAlign: "middle", marginRight: 4 }} />
-                  確認分類
-                </button>
+                  <Check size={12} /> 確認分類
+                </Button>
               </div>
             ) : (
               <div>
                 {isReviewed && (
-                  <div style={{ marginBottom: 8, fontSize: 11, color: "#059669", display: "flex", alignItems: "center", gap: 4 }}>
-                    <Check size={11} /> 人工已確認 · AI 將更新學習模型
+                  <div style={{ marginBottom: 8, fontSize: 11, color: "var(--green-9)", display: "flex", alignItems: "center", gap: 4 }}>
+                    <Check size={11} /> 人工已確認 -- AI 將更新學習模型
                   </div>
                 )}
                 <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-                  <span style={{
-                    fontSize: 11, fontWeight: 700, padding: "3px 8px", borderRadius: 4,
+                  <Badge variant="soft" style={{
+                    fontSize: 11, fontWeight: 700, padding: "3px 8px",
                     color: codeInfo.color, background: codeInfo.bg, border: `1px solid ${codeInfo.border}`,
                   }}>
                     {codeInfo.label}
-                  </span>
-                  <span style={{ fontSize: 11, color: "var(--fg-muted)" }}>{codeInfo.desc}</span>
+                  </Badge>
+                  <span style={{ fontSize: 11, color: "var(--gray-8)" }}>{codeInfo.desc}</span>
                   {!editCode ? (
-                    <button onClick={() => { setEditCode(true); setTempCode(currentCode); }}
-                      className="btn-ghost" style={{ padding: "3px 6px", marginLeft: "auto", display: "flex", alignItems: "center", gap: 3, fontSize: 11 }}>
+                    <Button variant="ghost" color="gray" size="1" onClick={() => { setEditCode(true); setTempCode(currentCode); }}
+                      style={{ marginLeft: "auto", cursor: "pointer", display: "flex", alignItems: "center", gap: 3, fontSize: 11 }}>
                       <Edit2 size={10} /> 編輯
-                    </button>
+                    </Button>
                   ) : (
                     <div style={{ display: "flex", gap: 5, marginLeft: "auto", alignItems: "center" }}>
                       <select value={tempCode} onChange={e => setTempCode(e.target.value)}
-                        style={{ fontSize: 11, padding: "3px 6px", border: "1px solid var(--border)", borderRadius: 3, background: "var(--bg)", color: "var(--fg)", outline: "none" }}>
+                        style={{ fontSize: 11, padding: "3px 6px", border: "1px solid var(--gray-5)", borderRadius: 3, background: "var(--color-background)", color: "var(--gray-12)", outline: "none" }}>
                         {Object.entries(DIR_CODES).map(([k, v]) => (
                           <option key={k} value={k}>{v.label} {v.desc}</option>
                         ))}
                       </select>
-                      <button onClick={() => { onConfirmCode(id, tempCode); setEditCode(false); }}
-                        style={{ padding: "3px 8px", fontSize: 11, fontWeight: 600, borderRadius: 3, border: "none", background: "var(--fg)", color: "var(--bg)", cursor: "pointer" }}>
+                      <Button variant="solid" color="green" size="1" onClick={() => { onConfirmCode(id, tempCode); setEditCode(false); }}
+                        style={{ cursor: "pointer" }}>
                         確認
-                      </button>
-                      <button onClick={() => setEditCode(false)}
-                        style={{ padding: "3px 6px", fontSize: 11, borderRadius: 3, border: "1px solid var(--border)", background: "var(--bg)", color: "var(--fg-muted)", cursor: "pointer" }}>
+                      </Button>
+                      <Button variant="outline" color="gray" size="1" onClick={() => setEditCode(false)}
+                        style={{ cursor: "pointer" }}>
                         取消
-                      </button>
+                      </Button>
                     </div>
                   )}
                 </div>
@@ -652,52 +648,45 @@ function DetailPanel({
             {!collapsed.has("ai") && (
               <div>
                 <div style={{
-                  padding: "10px 12px", background: "#eef2ff",
-                  borderLeft: "3px solid #6366f1", borderRadius: "0 4px 4px 0",
+                  padding: "10px 12px", background: "var(--green-2)",
+                  borderLeft: "3px solid var(--green-9)", borderRadius: "0 4px 4px 0",
                   display: "flex", gap: 8, marginBottom: 8,
                 }}>
-                  <Bot size={13} color="#6366f1" style={{ flexShrink: 0, marginTop: 2 }} />
-                  <p style={{ fontSize: 12, color: "#3730a3", margin: 0, lineHeight: 1.6 }}>{aiSuggestion}</p>
+                  <Bot size={13} color="var(--green-9)" style={{ flexShrink: 0, marginTop: 2 }} />
+                  <p style={{ fontSize: 12, color: "var(--green-11)", margin: 0, lineHeight: 1.6 }}>{aiSuggestion}</p>
                 </div>
                 {adopted === undefined && !hasFeedback && (
                   <div style={{ display: "flex", gap: 6 }}>
-                    <button onClick={() => onAdopt(id, true)} style={{
-                      flex: 1, padding: "6px 10px", fontSize: 11, fontWeight: 600, borderRadius: 4,
-                      border: "1px solid #a5b4fc", background: "#eef2ff", color: "#3730a3", cursor: "pointer",
-                      display: "flex", alignItems: "center", justifyContent: "center", gap: 4,
-                    }}>
+                    <Button variant="outline" color="green" size="2" onClick={() => onAdopt(id, true)}
+                      style={{ flex: 1, cursor: "pointer" }}>
                       <Check size={11} /> 採納建議
-                    </button>
-                    <button onClick={() => onAdopt(id, false)} style={{
-                      flex: 1, padding: "6px 10px", fontSize: 11, borderRadius: 4,
-                      border: "1px solid var(--border)", background: "var(--bg)", color: "var(--fg-muted)", cursor: "pointer",
-                    }}>
+                    </Button>
+                    <Button variant="outline" color="gray" size="2" onClick={() => onAdopt(id, false)}
+                      style={{ flex: 1, cursor: "pointer" }}>
                       不採納
-                    </button>
+                    </Button>
                   </div>
                 )}
                 {adopted === true && (
-                  <div style={{ fontSize: 11, color: "#059669", display: "flex", alignItems: "center", gap: 4 }}>
-                    <Check size={11} /> 已採納 · AI 將記錄此決策
+                  <div style={{ fontSize: 11, color: "var(--green-9)", display: "flex", alignItems: "center", gap: 4 }}>
+                    <Check size={11} /> 已採納 -- AI 將記錄此決策
                   </div>
                 )}
                 {adopted === false && !hasFeedback && (
                   <div>
-                    <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginBottom: 5 }}>說明原因（幫助 AI 學習）</div>
+                    <div style={{ fontSize: 11, color: "var(--gray-9)", marginBottom: 5 }}>說明原因（幫助 AI 學習）</div>
                     <div style={{ display: "flex", gap: 6 }}>
                       <input value={feedbackInput} onChange={e => setFeedbackInput(e.target.value)}
                         placeholder="例：此案由林律師主責..."
-                        style={{ flex: 1, fontSize: 11, padding: "5px 8px", border: "1px solid var(--border)", borderRadius: 4, background: "var(--bg)", color: "var(--fg)", outline: "none" }} />
-                      <button onClick={() => onFeedback(id)} style={{
-                        padding: "5px 12px", fontSize: 11, fontWeight: 600, borderRadius: 4,
-                        border: "none", background: "var(--fg)", color: "var(--bg)", cursor: "pointer",
-                      }}>送出</button>
+                        style={{ flex: 1, fontSize: 11, padding: "5px 8px", border: "1px solid var(--gray-5)", borderRadius: 4, background: "var(--color-background)", color: "var(--gray-12)", outline: "none" }} />
+                      <Button variant="solid" color="green" size="1" onClick={() => onFeedback(id)}
+                        style={{ cursor: "pointer" }}>送出</Button>
                     </div>
                   </div>
                 )}
                 {hasFeedback && (
-                  <div style={{ fontSize: 11, color: "var(--fg-subtle)", display: "flex", alignItems: "center", gap: 4 }}>
-                    <Check size={11} color="#059669" /> 感謝回饋 · AI 將持續優化
+                  <div style={{ fontSize: 11, color: "var(--gray-9)", display: "flex", alignItems: "center", gap: 4 }}>
+                    <Check size={11} color="var(--green-9)" /> 感謝回饋 -- AI 將持續優化
                   </div>
                 )}
               </div>
@@ -711,19 +700,19 @@ function DetailPanel({
           {!collapsed.has("staff") && (
             <div>
               <select value={assignees[id] ?? ""} onChange={e => onAssign(id, e.target.value)}
-                style={{ width: "100%", padding: "7px 10px", fontSize: 12, border: "1px solid var(--border)", borderRadius: 4, background: "var(--bg)", color: "var(--fg)", cursor: "pointer", outline: "none" }}>
+                style={{ width: "100%", padding: "7px 10px", fontSize: 12, border: "1px solid var(--gray-5)", borderRadius: 4, background: "var(--color-background)", color: "var(--gray-12)", cursor: "pointer", outline: "none" }}>
                 <option value="">— 未分配 —</option>
                 {MOCK_STAFF.map(s => (
-                  <option key={s.id} value={s.id}>{s.name} · {s.title}</option>
+                  <option key={s.id} value={s.id}>{s.name} -- {s.title}</option>
                 ))}
               </select>
               {assignees[id] && (() => {
                 const s = MOCK_STAFF.find(x => x.id === assignees[id]);
                 return s ? (
-                  <div style={{ marginTop: 6, padding: "7px 10px", background: "var(--sl2)", borderRadius: 4, border: "1px solid var(--border)" }}>
-                    <div style={{ fontSize: 11, color: "var(--fg)", fontWeight: 500, marginBottom: 3 }}>{s.name} <span style={{ color: "var(--fg-subtle)", fontWeight: 400 }}>· {s.title}</span></div>
-                    <div style={{ fontSize: 10, color: "var(--fg-subtle)" }}>
-                      專長：{s.specialties.join("、")} · 現有 {s.active_cases} 件
+                  <div style={{ marginTop: 6, padding: "7px 10px", background: "var(--gray-2)", borderRadius: 4, border: "1px solid var(--gray-5)" }}>
+                    <div style={{ fontSize: 11, color: "var(--gray-12)", fontWeight: 500, marginBottom: 3 }}>{s.name} <span style={{ color: "var(--gray-9)", fontWeight: 400 }}>-- {s.title}</span></div>
+                    <div style={{ fontSize: 10, color: "var(--gray-9)" }}>
+                      專長：{s.specialties.join("、")} -- 現有 {s.active_cases} 件
                     </div>
                   </div>
                 ) : null;
@@ -737,7 +726,7 @@ function DetailPanel({
           <div style={{ marginBottom: 16 }}>
             <SectionHead title="案件資訊" collapsed={collapsed.has("caseinfo")} onToggle={() => toggleSection("caseinfo")} />
             {!collapsed.has("caseinfo") && (
-              <div style={{ padding: "10px 12px", background: "var(--sl1)", border: "1px solid var(--border)", borderRadius: 4 }}>
+              <div style={{ padding: "10px 12px", background: "var(--gray-2)", border: "1px solid var(--gray-5)", borderRadius: 4 }}>
                 {[
                   { label: "申請號",  value: patentCase.app_number ?? "—",   mono: true },
                   { label: "狀態",    value: STATUS_LABELS[patentCase.status] },
@@ -747,8 +736,8 @@ function DetailPanel({
                   ...(patentCase.next_action   ? [{ label: "下一步", value: patentCase.next_action }] : []),
                 ].map(({ label, value, mono }) => (
                   <div key={label} style={{ display: "flex", gap: 10, fontSize: 11, marginBottom: 5 }}>
-                    <span style={{ color: "var(--fg-subtle)", minWidth: 48, flexShrink: 0 }}>{label}</span>
-                    <span style={{ color: "var(--fg)", fontFamily: mono ? "ui-monospace, monospace" : "inherit" }}>{value}</span>
+                    <span style={{ color: "var(--gray-9)", minWidth: 48, flexShrink: 0 }}>{label}</span>
+                    <span style={{ color: "var(--gray-12)", fontFamily: mono ? "ui-monospace, monospace" : "inherit" }}>{value}</span>
                   </div>
                 ))}
               </div>
@@ -761,41 +750,37 @@ function DetailPanel({
           <div style={{ marginBottom: 16 }}>
             <SectionHead title={`相關信件 (${threads.length})`} collapsed={collapsed.has("threads")} onToggle={() => toggleSection("threads")} />
             {!collapsed.has("threads") && (
-              <div style={{ border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ border: "1px solid var(--gray-5)", borderRadius: 4, overflow: "hidden" }}>
                 {threads.map((msg, i) => {
                   const isExp = expandedEmails.has(msg.id);
                   const isOut = msg.direction === "out";
                   return (
-                    <div key={msg.id} style={{ borderBottom: i < threads.length - 1 ? "1px solid var(--border)" : "none" }}>
+                    <div key={msg.id} style={{ borderBottom: i < threads.length - 1 ? "1px solid var(--gray-5)" : "none" }}>
                       <button onClick={() => toggleEmail(msg.id)} style={{
                         display: "flex", alignItems: "flex-start", gap: 8, padding: "9px 12px",
-                        width: "100%", border: "none", background: "var(--bg)", cursor: "pointer", textAlign: "left",
+                        width: "100%", border: "none", background: "var(--color-background)", cursor: "pointer", textAlign: "left",
                       }}>
                         <div style={{
                           width: 6, height: 6, borderRadius: "50%", flexShrink: 0, marginTop: 4,
-                          background: isOut ? "#3b82f6" : "#6b7280",
+                          background: isOut ? "var(--blue-9)" : "var(--gray-8)",
                         }} />
                         <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{ fontSize: 12, fontWeight: 500, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{msg.subject}</div>
-                          <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginTop: 1 }}>
-                            {isOut ? "↑ " : "↓ "}{msg.from_name} · {msg.date}
+                          <div style={{ fontSize: 12, fontWeight: 500, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{msg.subject}</div>
+                          <div style={{ fontSize: 10, color: "var(--gray-9)", marginTop: 1 }}>
+                            {isOut ? "^ " : "v "}{msg.from_name} -- {msg.date}
                           </div>
                         </div>
-                        <ChevronDown size={10} color="var(--fg-subtle)" style={{ flexShrink: 0, marginTop: 3, transform: isExp ? "none" : "rotate(-90deg)" }} />
+                        <ChevronDown size={10} color="var(--gray-8)" style={{ flexShrink: 0, marginTop: 3, transform: isExp ? "none" : "rotate(-90deg)" }} />
                       </button>
                       {isExp && (
                         <div style={{ padding: "0 12px 10px 26px" }}>
-                          <p style={{ fontSize: 11, color: "var(--fg-muted)", lineHeight: 1.6, margin: "0 0 8px" }}>{msg.snippet}</p>
+                          <p style={{ fontSize: 11, color: "var(--gray-8)", lineHeight: 1.6, margin: "0 0 8px" }}>{msg.snippet}</p>
                           {msg.attachments && msg.attachments.length > 0 && (
                             <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
                               {msg.attachments.map(a => (
-                                <span key={a} style={{
-                                  fontSize: 10, padding: "2px 6px", borderRadius: 3,
-                                  border: "1px solid var(--border)", background: "var(--sl2)",
-                                  color: "var(--fg-muted)", display: "flex", alignItems: "center", gap: 3,
-                                }}>
+                                <Badge key={a} variant="soft" color="gray" style={{ fontSize: 10, display: "flex", alignItems: "center", gap: 3 }}>
                                   <FileText size={9} /> {a}
-                                </span>
+                                </Badge>
                               ))}
                             </div>
                           )}
@@ -814,22 +799,22 @@ function DetailPanel({
           <div style={{ marginBottom: 16 }}>
             <SectionHead title={`相關案件 (${relatedCases.length})`} collapsed={collapsed.has("related")} onToggle={() => toggleSection("related")} />
             {!collapsed.has("related") && (
-              <div style={{ border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ border: "1px solid var(--gray-5)", borderRadius: 4, overflow: "hidden" }}>
                 {relatedCases.map((c, i) => {
                   const s = STATUS_LABELS[c.status];
                   return (
                     <div key={c.id} style={{
                       display: "flex", alignItems: "center", gap: 8, padding: "8px 12px",
-                      borderBottom: i < relatedCases.length - 1 ? "1px solid var(--border)" : "none",
+                      borderBottom: i < relatedCases.length - 1 ? "1px solid var(--gray-5)" : "none",
                     }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
-                        <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 9, color: "var(--fg-muted)", marginRight: 5 }}>{c.case_number}</span>
-                        <div style={{ fontSize: 11, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</div>
-                        <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginTop: 1 }}>
-                          {JURISDICTION_LABELS[c.jurisdiction as keyof typeof JURISDICTION_LABELS]} · {TYPE_LABELS[c.case_type]}
+                        <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 9, color: "var(--gray-8)", marginRight: 5 }}>{c.case_number}</span>
+                        <div style={{ fontSize: 11, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.title}</div>
+                        <div style={{ fontSize: 10, color: "var(--gray-9)", marginTop: 1 }}>
+                          {JURISDICTION_LABELS[c.jurisdiction as keyof typeof JURISDICTION_LABELS]} -- {TYPE_LABELS[c.case_type]}
                         </div>
                       </div>
-                      <span style={{ fontSize: 10, padding: "1px 5px", borderRadius: 3, background: "var(--sl3)", color: "var(--fg-muted)", whiteSpace: "nowrap", flexShrink: 0 }}>{s}</span>
+                      <Badge variant="soft" color="gray" style={{ fontSize: 10, whiteSpace: "nowrap", flexShrink: 0 }}>{s}</Badge>
                     </div>
                   );
                 })}
@@ -843,20 +828,20 @@ function DetailPanel({
           <SectionHead title="雲端文件" collapsed={collapsed.has("drive")} onToggle={() => toggleSection("drive")} />
           {!collapsed.has("drive") && (
             driveFiles.length > 0 ? (
-              <div style={{ border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
+              <div style={{ border: "1px solid var(--gray-5)", borderRadius: 4, overflow: "hidden" }}>
                 {driveFiles.map((f, i) => (
                   <div key={f.name} style={{
                     display: "flex", alignItems: "center", gap: 8, padding: "7px 12px",
-                    borderBottom: i < driveFiles.length - 1 ? "1px solid var(--border)" : "none",
-                    cursor: "pointer", background: "var(--bg)",
+                    borderBottom: i < driveFiles.length - 1 ? "1px solid var(--gray-5)" : "none",
+                    cursor: "pointer", background: "var(--color-background)",
                   }}
-                    onMouseEnter={el => { el.currentTarget.style.background = "var(--sl2)"; }}
-                    onMouseLeave={el => { el.currentTarget.style.background = "var(--bg)"; }}
+                    onMouseEnter={el => { el.currentTarget.style.background = "var(--gray-2)"; }}
+                    onMouseLeave={el => { el.currentTarget.style.background = "var(--color-background)"; }}
                   >
                     <DriveFileIcon type={f.type} />
                     <div style={{ flex: 1, minWidth: 0 }}>
-                      <div style={{ fontSize: 11, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
-                      <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginTop: 1, display: "flex", gap: 6 }}>
+                      <div style={{ fontSize: 11, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{f.name}</div>
+                      <div style={{ fontSize: 10, color: "var(--gray-9)", marginTop: 1, display: "flex", gap: 6 }}>
                         <span>{f.modified}</span>
                         {f.size && <span>{f.size}</span>}
                       </div>
@@ -866,7 +851,7 @@ function DetailPanel({
                 ))}
               </div>
             ) : (
-              <div style={{ fontSize: 11, color: "var(--fg-subtle)", padding: "8px 0" }}>尚無雲端文件</div>
+              <div style={{ fontSize: 11, color: "var(--gray-9)", padding: "8px 0" }}>尚無雲端文件</div>
             )
           )}
         </div>
@@ -974,28 +959,28 @@ export default function PatentDashboardPage() {
 
         {/* Stat strip */}
         <div style={{
-          display: "flex", border: "1px solid var(--border)", borderRadius: 4,
-          marginBottom: 20, overflow: "hidden", background: "var(--bg)",
+          display: "flex", border: "1px solid var(--gray-5)", borderRadius: 4,
+          marginBottom: 20, overflow: "hidden", background: "var(--color-background)",
         }}>
-          <StatCell label="進行中案件" value={<span style={{ color: "#1d4ed8" }}>{active.length}</span>} sub={`共 ${MOCK_CASES.length} 件`} />
+          <StatCell label="進行中案件" value={<span style={{ color: "var(--green-9)" }}>{active.length}</span>} sub={`共 ${MOCK_CASES.length} 件`} />
           <StatCell
             label="今日新收來文"
-            value={<span style={{ color: todayIn.length > 0 ? "#d97706" : "var(--fg)" }}>{todayIn.length}</span>}
+            value={<span style={{ color: todayIn.length > 0 ? "var(--orange-9)" : "var(--gray-12)" }}>{todayIn.length}</span>}
             sub={needsReview.length > 0 ? `${needsReview.length} 件待人工確認` : `AI 已分類 ${MOCK_INCOMING.length} 件`}
           />
           <StatCell
             label="7 天內截止"
-            value={<span style={{ color: urgent7.length > 0 ? "#dc2626" : "#16a34a" }}>{urgent7.length}</span>}
+            value={<span style={{ color: urgent7.length > 0 ? "var(--red-9)" : "var(--green-9)" }}>{urgent7.length}</span>}
             sub={urgent7.length > 0 ? "需立即處理" : "暫無緊急"}
           />
           <StatCell
             label="OA 待答辯"
-            value={<span style={{ color: oaCases.length > 0 ? "#d97706" : "#16a34a" }}>{oaCases.length}</span>}
+            value={<span style={{ color: oaCases.length > 0 ? "var(--orange-9)" : "var(--green-9)" }}>{oaCases.length}</span>}
             sub="件案件"
           />
           <StatCell
             label="年費 90 天預警"
-            value={<span style={{ color: annuity90.length > 0 ? "#7c3aed" : "#16a34a" }}>{annuity90.length}</span>}
+            value={<span style={{ color: annuity90.length > 0 ? "var(--violet-9)" : "var(--green-9)" }}>{annuity90.length}</span>}
             sub="件需注意" last
           />
         </div>
@@ -1007,17 +992,17 @@ export default function PatentDashboardPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
             {/* Block 1: 截止期限 */}
-            <div style={{ border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
+            <div style={{ border: "1px solid var(--gray-5)", borderRadius: 4, overflow: "hidden" }}>
               <BlockHead
-                icon={<Clock size={12} color="#dc2626" />}
+                icon={<Clock size={12} color="var(--red-9)" />}
                 title="截止期限"
                 badge={urgent7.length > 0 ? `${urgent7.length} 緊急` : undefined}
-                badgeColor="#dc2626"
+                badgeColor="var(--red-9)"
                 linkHref="/app/deadlines"
                 count={urgent30.length}
               />
               {pendingDls.length === 0 ? (
-                <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "var(--fg-subtle)" }}>目前無待處理期限</div>
+                <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "var(--gray-9)" }}>目前無待處理期限</div>
               ) : (
                 pendingDls.slice(0, 7).map((d, i, arr) => {
                   const days  = daysUntil(d.due_date);
@@ -1029,23 +1014,23 @@ export default function PatentDashboardPage() {
                       style={{
                         display: "grid", gridTemplateColumns: "120px 1fr 68px 46px",
                         alignItems: "center", gap: 10, padding: "9px 14px",
-                        borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none",
-                        borderLeft: `3px solid ${isSel ? "#6366f1" : urgencyBorder(days)}`,
+                        borderBottom: i < arr.length - 1 ? "1px solid var(--gray-5)" : "none",
+                        borderLeft: `3px solid ${isSel ? "var(--green-9)" : urgencyBorder(days)}`,
                         background: urgencyBg(days, isSel), cursor: "pointer",
                       }}
-                      onMouseEnter={el => { if (!isSel) el.currentTarget.style.background = "var(--sl2)"; }}
+                      onMouseEnter={el => { if (!isSel) el.currentTarget.style.background = "var(--gray-2)"; }}
                       onMouseLeave={el => { if (!isSel) el.currentTarget.style.background = urgencyBg(days, false); }}
                     >
-                      <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, fontWeight: 600, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 10, fontWeight: 600, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                         {d.case_number}
                       </span>
                       <div style={{ minWidth: 0 }}>
-                        <div style={{ fontSize: 12, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.description}</div>
-                        <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginTop: 1 }}>{d.client_name} · {d.assignee_name}</div>
+                        <div style={{ fontSize: 12, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.description}</div>
+                        <div style={{ fontSize: 10, color: "var(--gray-9)", marginTop: 1 }}>{d.client_name} -- {d.assignee_name}</div>
                       </div>
-                      <span style={{ fontSize: 10, padding: "2px 6px", borderRadius: 3, color: badge.fg, background: badge.bg, textAlign: "center", whiteSpace: "nowrap", fontWeight: 600 }}>
+                      <Badge variant="soft" style={{ fontSize: 10, fontWeight: 600, color: badge.fg, background: badge.bg, textAlign: "center", whiteSpace: "nowrap" }}>
                         {DEADLINE_TYPE_LABELS[d.type] ?? d.type}
-                      </span>
+                      </Badge>
                       <span style={{ fontSize: 11, fontWeight: 700, color: urgencyColor(days), textAlign: "right" }}>
                         {days <= 0 ? `逾${Math.abs(days)}d` : `${days}d`}
                       </span>
@@ -1056,12 +1041,12 @@ export default function PatentDashboardPage() {
             </div>
 
             {/* Block 3: 事務所待辦 */}
-            <div style={{ border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
+            <div style={{ border: "1px solid var(--gray-5)", borderRadius: 4, overflow: "hidden" }}>
               <BlockHead
-                icon={<CheckSquare size={12} color="var(--fg-muted)" />}
+                icon={<CheckSquare size={12} color="var(--gray-8)" />}
                 title="事務所待辦"
                 badge={urgentTodos.length > 0 ? `${urgentTodos.length} 急` : undefined}
-                badgeColor="#d97706"
+                badgeColor="var(--orange-9)"
                 linkHref="/app/todo"
                 count={pendingTodos.length}
               />
@@ -1074,27 +1059,27 @@ export default function PatentDashboardPage() {
                     onClick={() => select(t.id, "todo")}
                     style={{
                       display: "flex", alignItems: "flex-start", gap: 8, padding: "9px 14px",
-                      borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none",
-                      borderLeft: `3px solid ${isSel ? "#6366f1" : t.priority === "urgent" ? "#dc2626" : "#d97706"}`,
-                      background: isSel ? "#eef2ff" : "var(--bg)", cursor: "pointer",
+                      borderBottom: i < arr.length - 1 ? "1px solid var(--gray-5)" : "none",
+                      borderLeft: `3px solid ${isSel ? "var(--green-9)" : t.priority === "urgent" ? "var(--red-9)" : "var(--orange-9)"}`,
+                      background: isSel ? "var(--green-2)" : "var(--color-background)", cursor: "pointer",
                     }}
-                    onMouseEnter={el => { if (!isSel) el.currentTarget.style.background = "var(--sl2)"; }}
-                    onMouseLeave={el => { if (!isSel) el.currentTarget.style.background = "var(--bg)"; }}
+                    onMouseEnter={el => { if (!isSel) el.currentTarget.style.background = "var(--gray-2)"; }}
+                    onMouseLeave={el => { if (!isSel) el.currentTarget.style.background = "var(--color-background)"; }}
                   >
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 2 }}>
-                        <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 9, color: "var(--fg-muted)", background: "var(--sl3)", padding: "1px 4px", borderRadius: 2, border: "1px solid var(--border)" }}>
+                        <Badge variant="outline" color="gray" style={{ fontFamily: "ui-monospace, monospace", fontSize: 9, padding: "1px 4px" }}>
                           {t.case_number}
-                        </span>
-                        <span style={{ fontSize: 9, fontWeight: 600, color: dir.color, background: dir.bg, padding: "1px 4px", borderRadius: 2 }}>
+                        </Badge>
+                        <Badge variant="soft" style={{ fontSize: 9, fontWeight: 600, color: dir.color, padding: "1px 4px" }}>
                           {dir.label}
-                        </span>
+                        </Badge>
                         {t.priority === "urgent" && (
-                          <span style={{ fontSize: 9, fontWeight: 700, color: "#dc2626", background: "#fef2f2", padding: "1px 4px", borderRadius: 2 }}>急</span>
+                          <Badge variant="soft" color="red" style={{ fontSize: 9, fontWeight: 700, padding: "1px 4px" }}>急</Badge>
                         )}
                       </div>
-                      <div style={{ fontSize: 12, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.action}</div>
-                      <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginTop: 1 }}>{t.client}</div>
+                      <div style={{ fontSize: 12, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.action}</div>
+                      <div style={{ fontSize: 10, color: "var(--gray-9)", marginTop: 1 }}>{t.client}</div>
                     </div>
                     {days !== null && (
                       <span style={{ fontSize: 10, fontWeight: 600, color: urgencyColor(days), flexShrink: 0, marginTop: 2 }}>
@@ -1105,7 +1090,7 @@ export default function PatentDashboardPage() {
                 );
               })}
               {pendingTodos.length === 0 && (
-                <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "var(--fg-subtle)" }}>目前無待辦事項</div>
+                <div style={{ padding: 20, textAlign: "center", fontSize: 12, color: "var(--gray-9)" }}>目前無待辦事項</div>
               )}
             </div>
           </div>
@@ -1114,12 +1099,12 @@ export default function PatentDashboardPage() {
           <div style={{ display: "flex", flexDirection: "column", gap: 14 }}>
 
             {/* Block 2: 新收官方來文 */}
-            <div style={{ border: "1px solid var(--border)", borderRadius: 4, overflow: "hidden" }}>
+            <div style={{ border: "1px solid var(--gray-5)", borderRadius: 4, overflow: "hidden" }}>
               <BlockHead
-                icon={<Mail size={12} color="#2563eb" />}
+                icon={<Mail size={12} color="var(--green-9)" />}
                 title="新收官方來文"
                 badge={todayIn.length > 0 ? `今日 ${todayIn.length}` : undefined}
-                badgeColor="#2563eb"
+                badgeColor="var(--blue-9)"
               />
               {MOCK_INCOMING.map((m, i, arr) => {
                 const mc      = MAIL_CAT_COLOR[m.ai_category] ?? MAIL_CAT_COLOR["其他"];
@@ -1131,42 +1116,42 @@ export default function PatentDashboardPage() {
                     onClick={() => select(m.id, "incoming")}
                     style={{
                       padding: "9px 14px",
-                      borderBottom: i < arr.length - 1 ? "1px solid var(--border)" : "none",
-                      background: isSel ? "#eef2ff" : m.needs_review ? "#fffbeb" : "var(--bg)",
+                      borderBottom: i < arr.length - 1 ? "1px solid var(--gray-5)" : "none",
+                      background: isSel ? "var(--green-2)" : m.needs_review ? "var(--orange-2)" : "var(--color-background)",
                       cursor: "pointer",
-                      borderLeft: `3px solid ${isSel ? "#6366f1" : m.needs_review ? "#f59e0b" : "transparent"}`,
+                      borderLeft: `3px solid ${isSel ? "var(--green-9)" : m.needs_review ? "var(--orange-9)" : "transparent"}`,
                     }}
-                    onMouseEnter={el => { if (!isSel) el.currentTarget.style.background = "var(--sl2)"; }}
-                    onMouseLeave={el => { if (!isSel) el.currentTarget.style.background = isSel ? "#eef2ff" : m.needs_review ? "#fffbeb" : "var(--bg)"; }}
+                    onMouseEnter={el => { if (!isSel) el.currentTarget.style.background = "var(--gray-2)"; }}
+                    onMouseLeave={el => { if (!isSel) el.currentTarget.style.background = isSel ? "var(--green-2)" : m.needs_review ? "var(--orange-2)" : "var(--color-background)"; }}
                   >
                     <div style={{ display: "flex", alignItems: "flex-start", gap: 8 }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ display: "flex", alignItems: "center", gap: 4, marginBottom: 2 }}>
-                          <span style={{ fontFamily: "ui-monospace, monospace", fontSize: 9, color: "var(--fg-muted)", background: "var(--sl3)", padding: "1px 4px", borderRadius: 2 }}>
+                          <Badge variant="outline" color="gray" style={{ fontFamily: "ui-monospace, monospace", fontSize: 9, padding: "1px 4px" }}>
                             {m.case_number}
-                          </span>
-                          {isToday && <span style={{ fontSize: 9, fontWeight: 700, color: "#2563eb", background: "#eff6ff", padding: "0 4px", borderRadius: 2 }}>今日</span>}
+                          </Badge>
+                          {isToday && <Badge variant="soft" color="blue" style={{ fontSize: 9, fontWeight: 700 }}>今日</Badge>}
                           {m.needs_review && !reviewDone.has(m.id) && (
-                            <span style={{ fontSize: 9, fontWeight: 700, color: "#92400e", background: "#fff7ed", padding: "0 4px", borderRadius: 2, display: "flex", alignItems: "center", gap: 2 }}>
+                            <Badge variant="soft" color="orange" style={{ fontSize: 9, fontWeight: 700, display: "flex", alignItems: "center", gap: 2 }}>
                               <AlertTriangle size={8} /> 待確認
-                            </span>
+                            </Badge>
                           )}
                           {m.needs_review && reviewDone.has(m.id) && (
-                            <span style={{ fontSize: 9, fontWeight: 700, color: "#059669", background: "#ecfdf5", padding: "0 4px", borderRadius: 2 }}>已確認</span>
+                            <Badge variant="soft" color="green" style={{ fontSize: 9, fontWeight: 700 }}>已確認</Badge>
                           )}
                         </div>
-                        <div style={{ fontSize: 12, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.doc_title}</div>
-                        <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginTop: 1 }}>
-                          {m.client_name} · {m.office}
-                          {m.attachments > 0 && <span style={{ marginLeft: 6 }}>📎 {m.attachments}</span>}
+                        <div style={{ fontSize: 12, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{m.doc_title}</div>
+                        <div style={{ fontSize: 10, color: "var(--gray-9)", marginTop: 1 }}>
+                          {m.client_name} -- {m.office}
+                          {m.attachments > 0 && <span style={{ marginLeft: 6 }}>{m.attachments} att.</span>}
                         </div>
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: 3, flexShrink: 0 }}>
-                        <span style={{ fontSize: 9, fontWeight: 600, padding: "1px 5px", borderRadius: 3, color: mc.fg, background: mc.bg }}>
+                        <Badge variant="soft" style={{ fontSize: 9, fontWeight: 600, color: mc.fg, background: mc.bg }}>
                           {m.ai_category}
-                        </span>
+                        </Badge>
                         <span style={{ fontSize: 10, color: urgencyColor(days) }}>{days}d</span>
-                        <span style={{ fontSize: 9, color: m.ai_confidence < 0.9 ? "#d97706" : "var(--fg-subtle)" }}>
+                        <span style={{ fontSize: 9, color: m.ai_confidence < 0.9 ? "var(--orange-9)" : "var(--gray-9)" }}>
                           {Math.round(m.ai_confidence * 100)}%
                         </span>
                       </div>
@@ -1185,8 +1170,8 @@ export default function PatentDashboardPage() {
       <div style={{
         width: panelOpen ? panelWidth : 0,
         overflow: "hidden",
-        borderLeft: panelOpen ? "1px solid var(--border)" : "none",
-        background: "var(--bg)", flexShrink: 0,
+        borderLeft: panelOpen ? "1px solid var(--gray-5)" : "none",
+        background: "var(--color-background)", flexShrink: 0,
         display: "flex", flexDirection: "column",
         position: "relative",
         transition: panelOpen ? "none" : "width 0.2s",
@@ -1197,7 +1182,7 @@ export default function PatentDashboardPage() {
               position: "absolute", left: -3, top: 0, bottom: 0, width: 6,
               cursor: "col-resize", zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center",
             }}>
-              <div style={{ width: 2, height: 32, borderRadius: 2, background: "var(--sl7)", opacity: 0.5 }} />
+              <div style={{ width: 2, height: 32, borderRadius: 2, background: "var(--gray-7)", opacity: 0.5 }} />
             </div>
             <DetailPanel
               selected={selected!}

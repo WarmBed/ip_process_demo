@@ -478,3 +478,34 @@ Examiner: Dr. Robert Chen</p>
     ],
   },
 };
+
+// ── Attorney loading mock ─────────────────────────────────────
+
+export interface Attorney {
+  name: string;
+  clients: string[];
+  case_count: number;
+  pending_oa: number;
+  emails_this_week: number;
+  cases_due_30d: number;
+}
+
+export const MOCK_ATTORNEYS: Attorney[] = [
+  { name: "陳大明", clients: ["BRIT", "ABCD"], case_count: 23, pending_oa: 4, emails_this_week: 14, cases_due_30d: 5 },
+  { name: "林玲玲", clients: ["KOIT"],         case_count: 18, pending_oa: 2, emails_this_week: 8,  cases_due_30d: 3 },
+  { name: "王志達", clients: ["KOIS"],         case_count: 31, pending_oa: 5, emails_this_week: 19, cases_due_30d: 8 },
+  { name: "張美惠", clients: ["HSIN", "MIKE"], case_count: 11, pending_oa: 1, emails_this_week: 5,  cases_due_30d: 2 },
+];
+
+// ── IP Portfolio overview mock ────────────────────────────────
+
+export const MOCK_IP_PORTFOLIO = {
+  total_active_cases: 83,
+  patent_cases: 52,
+  trademark_cases: 31,
+  pending_oa: 12,
+  due_this_week: 3,
+  due_this_month: 9,
+  new_this_month: 7,
+  countries: ["US", "EU", "JP", "KR", "DE", "FR", "GB", "TH"],
+};

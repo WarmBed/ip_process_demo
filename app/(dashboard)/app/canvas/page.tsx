@@ -4,13 +4,14 @@ import { useState, useRef, useCallback, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import {
   Plus, MessageSquare, ZoomIn, ZoomOut, X, Send, Navigation, Pin,
-  RotateCcw, Maximize2, ChevronDown, ChevronUp, Paperclip,
+  RotateCcw, Maximize2, ChevronDown, ChevronUp, Paperclip, ExternalLink,
 } from "lucide-react";
 import { MOCK_EMAILS, MOCK_STATS, MOCK_BENEFITS } from "@/lib/mock-data";
 import { EmailDetailPanel } from "@/components/email-detail-panel";
 import type { AgentAction } from "@/app/api/v1/agent/chat/route";
+import { Button, Badge, Text, Box, Flex, IconButton } from "@radix-ui/themes";
 
-// ── Types ──────────────────────────────────────────────────────
+// -- Types ----------------------------------------------------
 
 type CardType = "emails_pending" | "emails_recent" | "emails_attachment" | "deadlines" | "stats" | "note";
 
@@ -24,19 +25,19 @@ interface ChatMsg {
   id: string; role: "user" | "ai"; content: string; action?: AgentAction;
 }
 
-// ── Default cards ──────────────────────────────────────────────
+// -- Default cards --------------------------------------------
 
 const INITIAL_CARDS: BoardCard[] = [
-  { id: "pending",   type: "emails_pending",    title: "待確認信件",   tag: "需處理",    tagColor: "#d97706", summary: "3 封待確認 — 需要人工審核",                 x: 0,   y: 0,   width: 284, color: "#fffbeb", borderColor: "#fcd34d" },
-  { id: "recent",    type: "emails_recent",     title: "最新信件",     tag: "今日 3 封", tagColor: "#2563eb", summary: "今天共收到 3 封，最後更新 16:42",           x: 308, y: 0,   width: 300, color: "#eff6ff", borderColor: "#93c5fd" },
-  { id: "attach",    type: "emails_attachment", title: "含附件信件",   tag: "4 封",      tagColor: "#7c3aed", summary: "Google Drive 已同步 · 最新附件 today",     x: 632, y: 0,   width: 268, color: "#f5f3ff", borderColor: "#c4b5fd" },
-  { id: "deadlines", type: "deadlines",         title: "近期行動期限", tag: "⚠ 今天",   tagColor: "#dc2626", summary: "最近期限：3/17 今天 · 3/20 3天後",          x: 0,   y: 460, width: 284, color: "#fef2f2", borderColor: "#fca5a5" },
-  { id: "stats",     type: "stats",             title: "本週統計",     tag: "本週",      tagColor: "#16a34a", summary: "47 封 · 準確率 94.7% · 省 4.3 hr",         x: 308, y: 460, width: 268, color: "#f0fdf4", borderColor: "#86efac" },
+  { id: "pending",   type: "emails_pending",    title: "待確認信件",   tag: "需處理",    tagColor: "var(--amber-9)", summary: "3 封待確認 -- 需要人工審核",                 x: 0,   y: 0,   width: 284, color: "var(--amber-2)", borderColor: "var(--amber-7)" },
+  { id: "recent",    type: "emails_recent",     title: "最新信件",     tag: "今日 3 封", tagColor: "var(--blue-9)", summary: "今天共收到 3 封，最後更新 16:42",           x: 308, y: 0,   width: 300, color: "var(--blue-2)", borderColor: "var(--blue-7)" },
+  { id: "attach",    type: "emails_attachment", title: "含附件信件",   tag: "4 封",      tagColor: "var(--purple-9)", summary: "Google Drive 已同步 -- 最新附件 today",     x: 632, y: 0,   width: 268, color: "var(--purple-2)", borderColor: "var(--purple-7)" },
+  { id: "deadlines", type: "deadlines",         title: "近期行動期限", tag: "今天",      tagColor: "var(--red-9)", summary: "最近期限：3/17 今天 -- 3/20 3天後",          x: 0,   y: 460, width: 284, color: "var(--red-2)", borderColor: "var(--red-7)" },
+  { id: "stats",     type: "stats",             title: "本週統計",     tag: "本週",      tagColor: "var(--green-9)", summary: "47 封 -- 準確率 94.7% -- 省 4.3 hr",         x: 308, y: 460, width: 268, color: "var(--green-2)", borderColor: "var(--green-7)" },
 ];
 
 const DOT_SIZE = 24;
 
-// ── Main component ─────────────────────────────────────────────
+// -- Main component -------------------------------------------
 
 export default function CanvasPage() {
   const router       = useRouter();
@@ -50,7 +51,7 @@ export default function CanvasPage() {
   const [chatOpen, setChatOpen]   = useState(false);
   const [panelWidth, setPanelWidth] = useState(400);
 
-  const [msgs, setMsgs]           = useState<ChatMsg[]>([{ id: "init", role: "ai", content: "你好！點擊卡片展開信件，點選任一封可在右側查看詳情。或說「帶我去…」直接跳轉頁面。" }]);
+  const [msgs, setMsgs]           = useState<ChatMsg[]>([{ id: "init", role: "ai", content: "你好！點擊卡片展開信件，點選任一封可在右側查看詳情。或說「帶我去...」直接跳轉頁面。" }]);
   const [chatInput, setChatInput] = useState("");
   const [chatLoading, setChatLoading] = useState(false);
   const chatBottomRef = useRef<HTMLDivElement>(null);
@@ -80,7 +81,7 @@ export default function CanvasPage() {
     return () => { window.removeEventListener("mousemove", onMove); window.removeEventListener("mouseup", onUp); };
   }, []);
 
-  // ── Pan / zoom ───────────────────────────────────────────────
+  // -- Pan / zoom ---------------------------------------------
 
   const onContainerDown = useCallback((e: React.MouseEvent) => {
     if ((e.target as HTMLElement).closest("[data-card],[data-ui]")) return;
@@ -129,7 +130,7 @@ export default function CanvasPage() {
     document.body.style.userSelect = "none";
   }, [panelWidth]);
 
-  // ── Card actions ─────────────────────────────────────────────
+  // -- Card actions -------------------------------------------
 
   const toggleExpand = useCallback((id: string) => {
     setExpanded(prev => { const n = new Set(prev); n.has(id) ? n.delete(id) : n.add(id); return n; });
@@ -144,7 +145,7 @@ export default function CanvasPage() {
     const rect = containerRef.current?.getBoundingClientRect();
     const cx = rect ? (rect.width / 2 - offset.x) / scale : 300;
     const cy = rect ? (rect.height / 2 - offset.y) / scale : 200;
-    setCards(prev => [...prev, { id: `note-${Date.now()}`, type: "note", title: "筆記", summary: "", x: cx - 130, y: cy - 40, width: 260, color: "#f9f9fb", borderColor: "#e8e8ec" }]);
+    setCards(prev => [...prev, { id: `note-${Date.now()}`, type: "note", title: "筆記", summary: "", x: cx - 130, y: cy - 40, width: 260, color: "var(--gray-2)", borderColor: "var(--gray-6)" }]);
   }, [offset, scale]);
 
   const pinToCanvas = useCallback((msg: ChatMsg) => {
@@ -153,8 +154,8 @@ export default function CanvasPage() {
     const cy = rect ? (rect.height / 2 - offset.y) / scale + (Math.random() - 0.5) * 160 : 250;
     setCards(prev => [...prev, {
       id: `ai-${msg.id}`, type: "note",
-      title: "AI 摘要", summary: msg.content.replace(/\*\*(.+?)\*\*/g, "$1").slice(0, 120) + "…",
-      x: cx, y: cy, width: 280, color: "#fffbeb", borderColor: "#fcd34d", tag: "AI", tagColor: "#d97706",
+      title: "AI 摘要", summary: msg.content.replace(/\*\*(.+?)\*\*/g, "$1").slice(0, 120) + "...",
+      x: cx, y: cy, width: 280, color: "var(--amber-2)", borderColor: "var(--amber-7)", tag: "AI", tagColor: "var(--amber-9)",
     }]);
   }, [offset, scale]);
 
@@ -170,7 +171,7 @@ export default function CanvasPage() {
     setOffset({ x: pad - Math.min(...cards.map(c => c.x)) * ns, y: pad - Math.min(...cards.map(c => c.y)) * ns });
   }, [cards]);
 
-  // ── Chat ─────────────────────────────────────────────────────
+  // -- Chat ---------------------------------------------------
 
   const sendChat = useCallback(async (text?: string) => {
     const content = (text ?? chatInput).trim();
@@ -187,7 +188,7 @@ export default function CanvasPage() {
     } finally { setChatLoading(false); }
   }, [chatInput, router]);
 
-  // ── Background dots ──────────────────────────────────────────
+  // -- Background dots ----------------------------------------
 
   const tileSize = DOT_SIZE * scale;
   const bpx = `${((offset.x % tileSize) + tileSize) % tileSize}px`;
@@ -196,15 +197,15 @@ export default function CanvasPage() {
   return (
     <div style={{ flex: 1, display: "flex", overflow: "hidden" }}>
 
-      {/* ── Canvas area ───────────────────────────────────────── */}
+      {/* -- Canvas area ----------------------------------------- */}
       <div
         ref={containerRef}
         style={{
           flex: 1, position: "relative", overflow: "hidden", cursor: "grab",
-          backgroundImage: "radial-gradient(circle, var(--sl7) 1.3px, transparent 1.3px)",
+          backgroundImage: "radial-gradient(circle, var(--gray-7) 1.3px, transparent 1.3px)",
           backgroundSize: `${tileSize}px ${tileSize}px`,
           backgroundPosition: `${bpx} ${bpy}`,
-          backgroundColor: "#f5f5f7",
+          backgroundColor: "var(--gray-2)",
         }}
         onMouseDown={onContainerDown}
         onMouseMove={onMouseMove}
@@ -243,7 +244,7 @@ export default function CanvasPage() {
         <div data-ui style={{
           position: "absolute", bottom: 18, left: "50%", transform: "translateX(-50%)",
           display: "flex", alignItems: "center", gap: 2,
-          background: "var(--bg)", border: "1px solid var(--border)",
+          background: "var(--color-background)", border: "1px solid var(--gray-6)",
           borderRadius: 10, padding: "4px 8px",
           boxShadow: "0 4px 20px rgba(0,0,0,0.10)", zIndex: 50,
         }}>
@@ -252,7 +253,7 @@ export default function CanvasPage() {
           <ToolBtn icon={<Plus size={14} />} label="筆記" onClick={addNoteCard} />
           <Sep />
           <ToolBtn icon={<ZoomIn size={13} />} onClick={() => setScale(s => Math.min(3, s * 1.15))} />
-          <span style={{ fontSize: 11, color: "var(--fg-muted)", minWidth: 36, textAlign: "center" }}>{Math.round(scale * 100)}%</span>
+          <Text size="1" style={{ color: "var(--gray-9)", minWidth: 36, textAlign: "center" }}>{Math.round(scale * 100)}%</Text>
           <ToolBtn icon={<ZoomOut size={13} />} onClick={() => setScale(s => Math.max(0.2, s / 1.15))} />
           <Sep />
           <ToolBtn icon={<Maximize2 size={13} />} label="全部" onClick={fitAll} />
@@ -261,20 +262,20 @@ export default function CanvasPage() {
 
         {/* Card count */}
         <div data-ui style={{
-          position: "absolute", top: 12, right: 12, fontSize: 11, color: "var(--fg-subtle)",
-          background: "var(--bg)", border: "1px solid var(--border)",
+          position: "absolute", top: 12, right: 12, fontSize: 11, color: "var(--gray-8)",
+          background: "var(--color-background)", border: "1px solid var(--gray-6)",
           padding: "3px 9px", borderRadius: 6, zIndex: 50,
         }}>
-          {cards.length} 張卡片{selectedId ? " · 右側查看詳情" : " · 點擊展開"}
+          {cards.length} 張卡片{selectedId ? " -- 右側查看詳情" : " -- 點擊展開"}
         </div>
       </div>
 
-      {/* ── Right detail panel ────────────────────────────────── */}
+      {/* -- Right detail panel ---------------------------------- */}
       <div style={{
         width: selectedId ? panelWidth : 0,
         overflow: "hidden",
-        borderLeft: selectedId ? "1px solid var(--border)" : "none",
-        background: "var(--bg)",
+        borderLeft: selectedId ? "1px solid var(--gray-6)" : "none",
+        background: "var(--color-background)",
         flexShrink: 0,
         display: "flex", flexDirection: "column",
         position: "relative",
@@ -289,7 +290,7 @@ export default function CanvasPage() {
                 cursor: "col-resize", zIndex: 20, display: "flex", alignItems: "center", justifyContent: "center",
               }}
             >
-              <div style={{ width: 2, height: 32, borderRadius: 2, background: "var(--sl7)", opacity: 0.5 }} />
+              <div style={{ width: 2, height: 32, borderRadius: 2, background: "var(--gray-7)", opacity: 0.5 }} />
             </div>
             <EmailDetailPanel
               emailId={selectedId}
@@ -303,7 +304,7 @@ export default function CanvasPage() {
   );
 }
 
-// ── Card node ─────────────────────────────────────────────────
+// -- Card node ------------------------------------------------
 
 function CardNode({ card, isExpanded, isSelected, onDragStart, onToggle, onDelete, onSelectEmail, onNavigate }: {
   card: BoardCard; isExpanded: boolean; isSelected: boolean;
@@ -322,7 +323,7 @@ function CardNode({ card, isExpanded, isSelected, onDragStart, onToggle, onDelet
       style={{
         position: "absolute", left: card.x, top: card.y, width: card.width,
         background: card.color,
-        border: `1.5px solid ${hovered || isExpanded ? card.borderColor : "var(--border)"}`,
+        border: `1.5px solid ${hovered || isExpanded ? card.borderColor : "var(--gray-6)"}`,
         borderRadius: 10, overflow: "hidden",
         boxShadow: isExpanded ? "0 12px 40px rgba(0,0,0,0.14)" : hovered ? "0 6px 20px rgba(0,0,0,0.10)" : "0 2px 8px rgba(0,0,0,0.06)",
         transition: "box-shadow 0.15s, border-color 0.15s",
@@ -333,26 +334,26 @@ function CardNode({ card, isExpanded, isSelected, onDragStart, onToggle, onDelet
         onMouseDown={(e) => onDragStart(e, card.id)}
         style={{
           padding: "11px 13px 10px", cursor: "grab",
-          borderBottom: isExpanded ? "1px solid var(--border)" : "none",
+          borderBottom: isExpanded ? "1px solid var(--gray-6)" : "none",
           background: isExpanded ? "rgba(255,255,255,0.55)" : "transparent",
         }}
       >
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start" }}>
           <div style={{ flex: 1, minWidth: 0 }}>
-            {card.tag && <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.8, color: card.tagColor ?? "var(--fg-muted)", textTransform: "uppercase", marginBottom: 4 }}>{card.tag}</div>}
-            <div style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)", lineHeight: 1.3 }}>{card.title}</div>
-            {!isExpanded && card.summary && <div style={{ fontSize: 11, color: "var(--fg-muted)", marginTop: 5, lineHeight: 1.5 }}>{card.summary}</div>}
+            {card.tag && <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: 0.8, color: card.tagColor ?? "var(--gray-9)", textTransform: "uppercase", marginBottom: 4 }}>{card.tag}</div>}
+            <Text size="2" weight="bold" style={{ color: "var(--gray-12)", lineHeight: 1.3 }}>{card.title}</Text>
+            {!isExpanded && card.summary && <Text size="1" style={{ color: "var(--gray-9)", display: "block", marginTop: 5, lineHeight: 1.5 }}>{card.summary}</Text>}
           </div>
           <div style={{ display: "flex", alignItems: "center", gap: 2, marginLeft: 6, flexShrink: 0 }}>
             {hovered && (
               <button onMouseDown={(e) => e.stopPropagation()} onClick={() => onDelete(card.id)}
-                style={{ border: "none", background: "transparent", cursor: "pointer", color: "var(--fg-subtle)", padding: 2, borderRadius: 3 }}>
+                style={{ border: "none", background: "transparent", cursor: "pointer", color: "var(--gray-8)", padding: 2, borderRadius: 3 }}>
                 <X size={11} />
               </button>
             )}
             {card.type !== "note" && (
               <button onMouseDown={(e) => e.stopPropagation()} onClick={() => onToggle(card.id)}
-                style={{ border: "none", background: "transparent", cursor: "pointer", color: "var(--fg-muted)", padding: 2, borderRadius: 3 }}>
+                style={{ border: "none", background: "transparent", cursor: "pointer", color: "var(--gray-9)", padding: 2, borderRadius: 3 }}>
                 {isExpanded ? <ChevronUp size={13} /> : <ChevronDown size={13} />}
               </button>
             )}
@@ -368,14 +369,14 @@ function CardNode({ card, isExpanded, isSelected, onDragStart, onToggle, onDelet
   );
 }
 
-// ── Expanded content by type ──────────────────────────────────
+// -- Expanded content by type ---------------------------------
 
 function ViewAllBtn({ url, label, onNavigate }: { url: string; label: string; onNavigate: (url: string) => void }) {
   return (
-    <div style={{ padding: "8px 13px", borderTop: "1px solid var(--border)" }}>
+    <div style={{ padding: "8px 13px", borderTop: "1px solid var(--gray-6)" }}>
       <button
         onClick={(e) => { e.stopPropagation(); onNavigate(url); }}
-        style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--fg-muted)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
+        style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 11, color: "var(--gray-9)", background: "none", border: "none", cursor: "pointer", padding: 0 }}
       >
         <ExternalLink size={10} /> {label}
       </button>
@@ -391,14 +392,14 @@ function ExpandedContent({ card, onSelectEmail, onNavigate }: {
   const pending = MOCK_EMAILS.filter(e => e.status === "pending");
   const recent  = [...MOCK_EMAILS].sort((a, b) => new Date(b.received_at).getTime() - new Date(a.received_at).getTime()).slice(0, 6);
   const withAtt = MOCK_EMAILS.filter(e => e.has_attachments);
-  const codeColor: Record<string, string> = { FA: "#2563eb", FC: "#7c3aed", TA: "#059669", TC: "#d97706", FG: "#dc2626", TG: "#9ca3af", FX: "#6b7280" };
+  const codeColor: Record<string, string> = { FA: "var(--blue-9)", FC: "var(--purple-9)", TA: "var(--green-9)", TC: "var(--amber-9)", FG: "var(--red-9)", TG: "var(--gray-9)", FX: "var(--gray-8)" };
   const statusLabel: Record<string, string> = { pending: "待確認", confirmed: "已確認", corrected: "已修正", failed: "失敗" };
   const fmt = (iso: string) => new Date(iso).toLocaleDateString("zh-TW", { month: "2-digit", day: "2-digit" });
 
   if (card.type === "emails_pending") return (
     <div>
       {pending.length === 0
-        ? <div style={{ padding: "20px 14px", textAlign: "center", fontSize: 12, color: "var(--fg-subtle)" }}>✅ 沒有待確認信件</div>
+        ? <div style={{ padding: "20px 14px", textAlign: "center", fontSize: 12, color: "var(--gray-8)" }}>沒有待確認信件</div>
         : pending.map((e, i) => <EmailRow key={e.id} e={e} codeColor={codeColor} statusLabel={statusLabel} fmt={fmt} isLast={i === pending.length - 1} onClick={() => onSelectEmail(e.id)} />)
       }
       <ViewAllBtn url="/app/emails?status=pending" label="查看全部待確認" onNavigate={onNavigate} />
@@ -416,18 +417,18 @@ function ExpandedContent({ card, onSelectEmail, onNavigate }: {
     <div>
       {withAtt.map((e, i) => (
         <div key={e.id} onClick={(ev) => { ev.stopPropagation(); onSelectEmail(e.id); }}
-          style={{ padding: "9px 13px", borderBottom: i < withAtt.length - 1 ? "1px solid var(--border)" : "none", cursor: "pointer", transition: "background 0.1s" }}
+          style={{ padding: "9px 13px", borderBottom: i < withAtt.length - 1 ? "1px solid var(--gray-6)" : "none", cursor: "pointer", transition: "background 0.1s" }}
           onMouseEnter={el => (el.currentTarget.style.background = "rgba(0,0,0,0.03)")}
           onMouseLeave={el => (el.currentTarget.style.background = "transparent")}
         >
           <div style={{ display: "flex", gap: 7 }}>
-            <Paperclip size={12} color="var(--fg-subtle)" style={{ marginTop: 2, flexShrink: 0 }} />
+            <Paperclip size={12} color="var(--gray-8)" style={{ marginTop: 2, flexShrink: 0 }} />
             <div style={{ flex: 1, minWidth: 0 }}>
-              <div style={{ fontSize: 12, color: "var(--fg)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.subject}</div>
+              <div style={{ fontSize: 12, color: "var(--gray-12)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{e.subject}</div>
               <div style={{ display: "flex", gap: 6, marginTop: 3 }}>
-                <span style={{ fontSize: 10, fontWeight: 700, color: codeColor[e.direction_code ?? ""] ?? "#6b7280", background: "rgba(0,0,0,0.05)", padding: "0 4px", borderRadius: 3 }}>{e.direction_code}</span>
-                <span style={{ fontSize: 10, color: "var(--fg-subtle)" }}>{e.sender_name}</span>
-                <span style={{ fontSize: 10, color: "var(--fg-subtle)", marginLeft: "auto" }}>{fmt(e.received_at)}</span>
+                <span style={{ fontSize: 10, fontWeight: 700, color: codeColor[e.direction_code ?? ""] ?? "var(--gray-8)", background: "rgba(0,0,0,0.05)", padding: "0 4px", borderRadius: 3 }}>{e.direction_code}</span>
+                <span style={{ fontSize: 10, color: "var(--gray-8)" }}>{e.sender_name}</span>
+                <span style={{ fontSize: 10, color: "var(--gray-8)", marginLeft: "auto" }}>{fmt(e.received_at)}</span>
               </div>
             </div>
           </div>
@@ -444,22 +445,22 @@ function ExpandedContent({ card, onSelectEmail, onNavigate }: {
       { date: "4/15", label: "BRIT25710PUS1 USPTO 官方 OA",   type: "官方", daysLeft: 29, id: "e001" },
       { date: "6/15", label: "KOIT20004TUS7 USPTO OA2 官方",  type: "官方", daysLeft: 90, id: "e002" },
     ];
-    const uc = (d: number) => d === 0 ? "#dc2626" : d <= 5 ? "#d97706" : "var(--fg-muted)";
+    const uc = (d: number) => d === 0 ? "var(--red-9)" : d <= 5 ? "var(--amber-9)" : "var(--gray-9)";
     return (
       <div>
         {items.map((d, i) => (
           <div key={i} onClick={(ev) => { ev.stopPropagation(); onSelectEmail(d.id); }}
-            style={{ padding: "9px 13px", borderBottom: i < items.length - 1 ? "1px solid var(--border)" : "none", cursor: "pointer", transition: "background 0.1s" }}
+            style={{ padding: "9px 13px", borderBottom: i < items.length - 1 ? "1px solid var(--gray-6)" : "none", cursor: "pointer", transition: "background 0.1s" }}
             onMouseEnter={el => (el.currentTarget.style.background = "rgba(0,0,0,0.03)")}
             onMouseLeave={el => (el.currentTarget.style.background = "transparent")}
           >
             <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
               <div style={{ minWidth: 32, fontSize: 11, fontWeight: 700, color: uc(d.daysLeft), textAlign: "center" }}>{d.date}</div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontSize: 12, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.label}</div>
+                <div style={{ fontSize: 12, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.label}</div>
                 <div style={{ display: "flex", gap: 6, marginTop: 2 }}>
-                  <span style={{ fontSize: 10, color: "var(--fg-subtle)", background: "rgba(0,0,0,0.05)", padding: "0 4px", borderRadius: 3 }}>{d.type}</span>
-                  <span style={{ fontSize: 10, color: uc(d.daysLeft), fontWeight: d.daysLeft <= 5 ? 600 : 400 }}>{d.daysLeft === 0 ? "今天 ⚠" : `${d.daysLeft} 天後`}</span>
+                  <span style={{ fontSize: 10, color: "var(--gray-8)", background: "rgba(0,0,0,0.05)", padding: "0 4px", borderRadius: 3 }}>{d.type}</span>
+                  <span style={{ fontSize: 10, color: uc(d.daysLeft), fontWeight: d.daysLeft <= 5 ? 600 : 400 }}>{d.daysLeft === 0 ? "今天" : `${d.daysLeft} 天後`}</span>
                 </div>
               </div>
             </div>
@@ -480,25 +481,25 @@ function ExpandedContent({ card, onSelectEmail, onNavigate }: {
           { label: "API 成本", value: `$${MOCK_STATS.api_cost_usd.toFixed(2)}` },
         ].map(({ label, value }) => (
           <div key={label} style={{ background: "rgba(0,0,0,0.04)", borderRadius: 7, padding: "8px 10px" }}>
-            <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginBottom: 2 }}>{label}</div>
-            <div style={{ fontSize: 16, fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.02em" }}>{value}</div>
+            <Text size="1" style={{ color: "var(--gray-8)", display: "block", marginBottom: 2 }}>{label}</Text>
+            <Text style={{ fontSize: 16, fontWeight: 700, color: "var(--gray-12)", letterSpacing: "-0.02em" }}>{value}</Text>
           </div>
         ))}
       </div>
-      <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginBottom: 6 }}>每日處理封數</div>
+      <Text size="1" style={{ color: "var(--gray-8)", display: "block", marginBottom: 6 }}>每日處理封數</Text>
       <div style={{ display: "flex", gap: 4, alignItems: "flex-end", height: 40 }}>
         {MOCK_BENEFITS.map(b => {
           const max = Math.max(...MOCK_BENEFITS.map(x => x.emails_processed));
           return (
             <div key={b.date} style={{ flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: 2 }}>
-              <div style={{ width: "100%", height: Math.round((b.emails_processed / max) * 36), background: "#86efac", borderRadius: 2 }} />
-              <span style={{ fontSize: 9, color: "var(--fg-subtle)" }}>{b.date.slice(5)}</span>
+              <div style={{ width: "100%", height: Math.round((b.emails_processed / max) * 36), background: "var(--green-7)", borderRadius: 2 }} />
+              <span style={{ fontSize: 9, color: "var(--gray-8)" }}>{b.date.slice(5)}</span>
             </div>
           );
         })}
       </div>
       <button onClick={(e) => { e.stopPropagation(); onNavigate("/app/stats"); }}
-        style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 11, color: "var(--fg-muted)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
+        style={{ display: "flex", alignItems: "center", gap: 4, marginTop: 10, fontSize: 11, color: "var(--gray-9)", background: "none", border: "none", cursor: "pointer", padding: 0 }}>
         <ExternalLink size={10} /> 查看完整統計
       </button>
     </div>
@@ -511,30 +512,30 @@ function EmailRow({ e, codeColor, statusLabel, fmt, isLast, onClick }: {
   e: any; codeColor: Record<string, string>; statusLabel: Record<string, string>;
   fmt: (s: string) => string; isLast: boolean; onClick: () => void;
 }) {
-  const sc = e.status === "confirmed" ? "#16a34a" : e.status === "failed" ? "#dc2626" : "#d97706";
+  const sc = e.status === "confirmed" ? "var(--green-9)" : e.status === "failed" ? "var(--red-9)" : "var(--amber-9)";
   return (
     <div onClick={(e) => { e.stopPropagation(); onClick(); }}
-      style={{ padding: "9px 13px", borderBottom: isLast ? "none" : "1px solid var(--border)", cursor: "pointer", transition: "background 0.1s" }}
+      style={{ padding: "9px 13px", borderBottom: isLast ? "none" : "1px solid var(--gray-6)", cursor: "pointer", transition: "background 0.1s" }}
       onMouseEnter={el => (el.currentTarget.style.background = "rgba(0,0,0,0.03)")}
       onMouseLeave={el => (el.currentTarget.style.background = "transparent")}
     >
       <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 3 }}>
-        <span style={{ fontSize: 10, fontWeight: 700, color: codeColor[e.direction_code ?? ""] ?? "#6b7280", background: "rgba(0,0,0,0.05)", padding: "0 4px", borderRadius: 3, flexShrink: 0 }}>{e.direction_code ?? "?"}</span>
-        <span style={{ fontSize: 12, color: "var(--fg)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{e.subject}</span>
+        <span style={{ fontSize: 10, fontWeight: 700, color: codeColor[e.direction_code ?? ""] ?? "var(--gray-8)", background: "rgba(0,0,0,0.05)", padding: "0 4px", borderRadius: 3, flexShrink: 0 }}>{e.direction_code ?? "?"}</span>
+        <span style={{ fontSize: 12, color: "var(--gray-12)", fontWeight: 500, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }}>{e.subject}</span>
       </div>
       <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-        <span style={{ fontSize: 10, color: "var(--fg-subtle)", flex: 1 }}>{e.sender_name}</span>
+        <span style={{ fontSize: 10, color: "var(--gray-8)", flex: 1 }}>{e.sender_name}</span>
         {e.status && <span style={{ fontSize: 9, fontWeight: 600, color: sc, background: "rgba(0,0,0,0.05)", padding: "1px 5px", borderRadius: 3 }}>{statusLabel[e.status] ?? ""}</span>}
-        <span style={{ fontSize: 10, color: "var(--fg-subtle)" }}>{fmt(e.received_at)}</span>
+        <span style={{ fontSize: 10, color: "var(--gray-8)" }}>{fmt(e.received_at)}</span>
       </div>
     </div>
   );
 }
 
-// ── Floating chat ─────────────────────────────────────────────
+// -- Floating chat --------------------------------------------
 
 function FloatingChat({ msgs, input, loading, bottomRef, onInput, onSend, onClose, onPin, onNavigate }: {
-  msgs: ChatMsg[]; input: string; loading: boolean; bottomRef: React.RefObject<HTMLDivElement>;
+  msgs: ChatMsg[]; input: string; loading: boolean; bottomRef: React.RefObject<HTMLDivElement | null>;
   onInput: (v: string) => void; onSend: (text?: string) => void;
   onClose: () => void; onPin: (msg: ChatMsg) => void; onNavigate: (url: string) => void;
 }) {
@@ -542,20 +543,20 @@ function FloatingChat({ msgs, input, loading, bottomRef, onInput, onSend, onClos
     <div data-ui onMouseDown={(e) => e.stopPropagation()} style={{
       position: "absolute", left: 16, top: 16,
       width: 308, height: 480,
-      background: "var(--bg)", border: "1px solid var(--border)",
+      background: "var(--color-background)", border: "1px solid var(--gray-6)",
       borderRadius: 12, boxShadow: "0 12px 40px rgba(0,0,0,0.13)",
       zIndex: 100, display: "flex", flexDirection: "column", overflow: "hidden",
     }}>
-      <div style={{ padding: "10px 12px", borderBottom: "1px solid var(--border)", display: "flex", justifyContent: "space-between", alignItems: "center", background: "var(--sl2)", flexShrink: 0 }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-          <div style={{ width: 20, height: 20, borderRadius: 5, background: "var(--fg)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-            <MessageSquare size={11} color="var(--bg)" />
+      <Flex align="center" justify="between" style={{ padding: "10px 12px", borderBottom: "1px solid var(--gray-6)", background: "var(--gray-3)", flexShrink: 0 }}>
+        <Flex align="center" gap="2">
+          <div style={{ width: 20, height: 20, borderRadius: 5, background: "var(--gray-12)", display: "flex", alignItems: "center", justifyContent: "center" }}>
+            <MessageSquare size={11} color="var(--color-background)" />
           </div>
-          <span style={{ fontSize: 13, fontWeight: 600, color: "var(--fg)" }}>AI 助理</span>
-          <span style={{ fontSize: 10, color: "var(--fg-subtle)", background: "var(--sl4)", padding: "1px 6px", borderRadius: 4 }}>畫布</span>
-        </div>
-        <button className="btn-ghost" onClick={onClose} style={{ padding: "2px 4px" }}><X size={13} /></button>
-      </div>
+          <Text size="2" weight="bold" style={{ color: "var(--gray-12)" }}>AI 助理</Text>
+          <Badge variant="soft" color="gray" size="1">畫布</Badge>
+        </Flex>
+        <IconButton variant="ghost" size="1" onClick={onClose}><X size={13} /></IconButton>
+      </Flex>
       <div style={{ flex: 1, overflowY: "auto", padding: 10, display: "flex", flexDirection: "column", gap: 8 }}>
         {msgs.map(msg => (
           <div key={msg.id} style={{ display: "flex", flexDirection: "column", alignItems: msg.role === "user" ? "flex-end" : "flex-start" }}>
@@ -565,46 +566,46 @@ function FloatingChat({ msgs, input, loading, bottomRef, onInput, onSend, onClos
                 : msg.content }}
             />
             {msg.role === "ai" && (
-              <div style={{ display: "flex", gap: 4, marginTop: 5, flexWrap: "wrap" }}>
-                <button onClick={() => onPin(msg)} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, padding: "2px 8px", borderRadius: 4, border: "1px solid var(--border)", background: "var(--sl3)", color: "var(--fg-muted)", cursor: "pointer" }}>
+              <Flex gap="1" mt="1" wrap="wrap">
+                <Button variant="ghost" size="1" onClick={() => onPin(msg)} style={{ gap: 3, fontSize: 10 }}>
                   <Pin size={9} /> 固定到畫布
-                </button>
+                </Button>
                 {msg.action && (
-                  <button onClick={() => onNavigate(msg.action!.url)} style={{ display: "inline-flex", alignItems: "center", gap: 3, fontSize: 10, padding: "2px 8px", borderRadius: 4, border: "none", background: "var(--fg)", color: "var(--bg)", cursor: "pointer" }}>
+                  <Button variant="solid" size="1" onClick={() => onNavigate(msg.action!.url)} style={{ gap: 3, fontSize: 10 }}>
                     <Navigation size={9} /> {msg.action.label}
-                  </button>
+                  </Button>
                 )}
-              </div>
+              </Flex>
             )}
           </div>
         ))}
-        {loading && <div className="agent-msg-ai" style={{ color: "var(--fg-subtle)", fontSize: 12 }}><span style={{ letterSpacing: 2 }}>●●●</span></div>}
+        {loading && <div className="agent-msg-ai" style={{ color: "var(--gray-8)", fontSize: 12 }}><span style={{ letterSpacing: 2 }}>...</span></div>}
         <div ref={bottomRef} />
       </div>
-      <div style={{ padding: "8px 10px", borderTop: "1px solid var(--border)", display: "flex", gap: 6, alignItems: "center", flexShrink: 0 }}>
+      <Flex gap="2" align="center" style={{ padding: "8px 10px", borderTop: "1px solid var(--gray-6)", flexShrink: 0 }}>
         <input value={input} onChange={(e) => onInput(e.target.value)}
           onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); onSend(); } }}
-          placeholder="問問 AI，或說「帶我去…」"
-          style={{ flex: 1, border: "1px solid var(--border)", borderRadius: 6, padding: "6px 9px", fontSize: 12, outline: "none", background: "var(--bg)", color: "var(--fg)" }}
+          placeholder="問問 AI，或說「帶我去...」"
+          style={{ flex: 1, border: "1px solid var(--gray-6)", borderRadius: 6, padding: "6px 9px", fontSize: 12, outline: "none", background: "var(--color-background)", color: "var(--gray-12)" }}
         />
-        <button className="btn-primary" onClick={() => onSend()} disabled={loading || !input.trim()}
+        <Button variant="solid" color="green" size="1" onClick={() => onSend()} disabled={loading || !input.trim()}
           style={{ height: 30, width: 30, padding: 0, justifyContent: "center", flexShrink: 0 }}>
           <Send size={11} />
-        </button>
-      </div>
+        </Button>
+      </Flex>
     </div>
   );
 }
 
-// ── Helpers ───────────────────────────────────────────────────
+// -- Helpers --------------------------------------------------
 
-function Sep() { return <div style={{ width: 1, height: 18, background: "var(--border)", margin: "0 3px" }} />; }
+function Sep() { return <div style={{ width: 1, height: 18, background: "var(--gray-6)", margin: "0 3px" }} />; }
 
 function ToolBtn({ icon, label, onClick, active }: { icon: React.ReactNode; label?: string; onClick: () => void; active?: boolean; }) {
   return (
-    <button data-ui className={`btn-ghost${active ? " active" : ""}`} onClick={onClick} style={{ padding: label ? "4px 8px" : "4px 6px", gap: 4 }}>
+    <Button data-ui variant={active ? "solid" : "ghost"} color={active ? "green" : "gray"} size="1" onClick={onClick} style={{ padding: label ? "4px 8px" : "4px 6px", gap: 4 }}>
       {icon}
       {label && <span style={{ fontSize: 12 }}>{label}</span>}
-    </button>
+    </Button>
   );
 }

@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import type { ApiResponse, BenefitsStat } from "@/lib/types";
 import { MOCK_STATS } from "@/lib/mock-data";
+import { Separator } from "@radix-ui/themes";
 
 export default function StatsPage() {
   const [benefits, setBenefits] = useState<BenefitsStat[]>([]);
@@ -22,7 +23,7 @@ export default function StatsPage() {
     <div style={{ padding: "24px 28px", maxWidth: 900 }}>
 
       {/* Summary cards */}
-      <div style={{ display: "flex", border: "1px solid var(--border)", borderRadius: 10, marginBottom: 28, overflow: "hidden", background: "var(--bg)" }}>
+      <div style={{ display: "flex", border: "1px solid var(--gray-6)", borderRadius: 10, marginBottom: 28, overflow: "hidden", background: "var(--color-background)" }}>
         {[
           { label: "累計處理信件", value: String(MOCK_STATS.total_processed), unit: "封" },
           { label: "本週處理",     value: String(MOCK_STATS.this_week),        unit: "封" },
@@ -30,21 +31,21 @@ export default function StatsPage() {
         ].map((c, i, arr) => (
           <div key={c.label} style={{
             flex: 1, padding: "16px 24px",
-            borderRight: i < arr.length - 1 ? "1px solid var(--border)" : "none",
+            borderRight: i < arr.length - 1 ? "1px solid var(--gray-6)" : "none",
           }}>
-            <div style={{ fontSize: 12, color: "var(--fg-subtle)", fontWeight: 500, marginBottom: 6 }}>{c.label}</div>
-            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--fg)", letterSpacing: "-0.02em" }}>
-              {c.value}{c.unit && <span style={{ fontSize: 13, fontWeight: 400, color: "var(--fg-muted)", marginLeft: 3 }}>{c.unit}</span>}
+            <div style={{ fontSize: 12, color: "var(--gray-9)", fontWeight: 500, marginBottom: 6 }}>{c.label}</div>
+            <div style={{ fontSize: 20, fontWeight: 700, color: "var(--gray-12)", letterSpacing: "-0.02em" }}>
+              {c.value}{c.unit && <span style={{ fontSize: 13, fontWeight: 400, color: "var(--gray-11)", marginLeft: 3 }}>{c.unit}</span>}
             </div>
           </div>
         ))}
       </div>
 
       {/* Daily bar chart */}
-      <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
+      <div style={{ border: "1px solid var(--gray-6)", borderRadius: 8, overflow: "hidden" }}>
         <div style={{
-          padding: "12px 16px", borderBottom: "1px solid var(--border)",
-          background: "var(--sl2)", fontSize: 13, fontWeight: 600, color: "var(--fg)",
+          padding: "12px 16px", borderBottom: "1px solid var(--gray-6)",
+          background: "var(--gray-2)", fontSize: 13, fontWeight: 600, color: "var(--gray-12)",
         }}>
           每日處理量
         </div>
@@ -52,16 +53,16 @@ export default function StatsPage() {
           <div key={b.date} style={{
             display: "grid", gridTemplateColumns: "70px 1fr 60px",
             alignItems: "center", gap: 14, padding: "10px 16px",
-            borderBottom: i < benefits.length - 1 ? "1px solid var(--border)" : "none",
+            borderBottom: i < benefits.length - 1 ? "1px solid var(--gray-6)" : "none",
           }}>
-            <span style={{ fontSize: 12, color: "var(--fg-muted)" }}>{b.date.slice(5)}</span>
-            <div style={{ height: 8, background: "var(--sl4)", borderRadius: 4, overflow: "hidden" }}>
+            <span style={{ fontSize: 12, color: "var(--gray-11)" }}>{b.date.slice(5)}</span>
+            <div style={{ height: 8, background: "var(--gray-4)", borderRadius: 4, overflow: "hidden" }}>
               <div style={{
                 width: `${Math.round((b.emails_processed / maxEmails) * 100)}%`,
-                height: "100%", background: "var(--fg)", borderRadius: 4,
+                height: "100%", background: "var(--green-9)", borderRadius: 4,
               }} />
             </div>
-            <span style={{ fontSize: 12, color: "var(--fg)", textAlign: "right" }}>{b.emails_processed} 封</span>
+            <span style={{ fontSize: 12, color: "var(--gray-12)", textAlign: "right" }}>{b.emails_processed} 封</span>
           </div>
         ))}
       </div>

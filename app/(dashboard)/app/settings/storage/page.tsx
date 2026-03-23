@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CheckCircle, AlertCircle, ExternalLink, FolderOpen, RefreshCw, Trash2 } from "lucide-react";
 import Link from "next/link";
+import { Button, Badge, Text, Box, Flex, IconButton, Separator } from "@radix-ui/themes";
 
 type ConnectionStatus = "connected" | "disconnected" | "error";
 
@@ -76,19 +77,19 @@ function formatBytes(bytes: number) {
 
 function StatusBadge({ status }: { status: ConnectionStatus }) {
   if (status === "connected") return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#166534", background: "#f0fdf4", border: "1px solid #bbf7d0", padding: "2px 8px", borderRadius: 5 }}>
+    <Badge variant="soft" color="green" size="1">
       <CheckCircle size={11} /> 已連接
-    </span>
+    </Badge>
   );
   if (status === "error") return (
-    <span style={{ display: "inline-flex", alignItems: "center", gap: 5, fontSize: 12, color: "#991b1b", background: "#fef2f2", border: "1px solid #fecaca", padding: "2px 8px", borderRadius: 5 }}>
+    <Badge variant="soft" color="red" size="1">
       <AlertCircle size={11} /> 連接錯誤
-    </span>
+    </Badge>
   );
   return (
-    <span style={{ fontSize: 12, color: "var(--fg-subtle)", background: "var(--sl3)", border: "1px solid var(--border)", padding: "2px 8px", borderRadius: 5 }}>
+    <Badge variant="soft" color="gray" size="1">
       未連接
-    </span>
+    </Badge>
   );
 }
 
@@ -105,117 +106,117 @@ export default function StoragePage() {
     <div style={{ padding: "24px 28px", maxWidth: 800 }}>
 
       {/* Breadcrumb */}
-      <div style={{ display: "flex", alignItems: "center", gap: 6, fontSize: 12, color: "var(--fg-subtle)", marginBottom: 16 }}>
-        <Link href="/app/settings" style={{ color: "var(--fg-muted)" }}>設定</Link>
-        <span>›</span>
-        <span style={{ color: "var(--fg)" }}>儲存空間</span>
-      </div>
+      <Flex align="center" gap="2" mb="4" style={{ fontSize: 12, color: "var(--gray-8)" }}>
+        <Link href="/app/settings" style={{ color: "var(--gray-9)" }}>設定</Link>
+        <span style={{ color: "var(--gray-7)" }}>›</span>
+        <Text size="1" style={{ color: "var(--gray-12)" }}>儲存空間</Text>
+      </Flex>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+      <Flex direction="column" gap="3">
         {providers.map((p) => (
-          <div key={p.id} style={{
-            border: "1px solid var(--border)", borderRadius: 10,
-            background: "var(--bg)", overflow: "hidden",
+          <Box key={p.id} style={{
+            border: "1px solid var(--gray-6)", borderRadius: 10,
+            background: "var(--color-background)", overflow: "hidden",
           }}>
             {/* Provider header */}
-            <div style={{
-              display: "flex", alignItems: "center", justifyContent: "space-between",
+            <Flex align="center" justify="between" style={{
               padding: "16px 20px",
-              borderBottom: p.status === "connected" ? "1px solid var(--border)" : "none",
+              borderBottom: p.status === "connected" ? "1px solid var(--gray-6)" : "none",
             }}>
-              <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
+              <Flex align="center" gap="3">
                 <div style={{
                   width: 40, height: 40, borderRadius: 8,
-                  border: "1px solid var(--border)", background: "var(--sl2)",
+                  border: "1px solid var(--gray-6)", background: "var(--gray-3)",
                   display: "flex", alignItems: "center", justifyContent: "center",
                 }}>
                   {p.icon}
                 </div>
                 <div>
-                  <div style={{ fontSize: 14, fontWeight: 600, color: "var(--fg)" }}>{p.name}</div>
-                  <div style={{ fontSize: 12, color: "var(--fg-subtle)", marginTop: 2 }}>{p.description}</div>
+                  <Text size="2" weight="bold" style={{ color: "var(--gray-12)" }}>{p.name}</Text>
+                  <Text size="1" style={{ color: "var(--gray-8)", display: "block", marginTop: 2 }}>{p.description}</Text>
                 </div>
-              </div>
+              </Flex>
 
-              <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+              <Flex align="center" gap="3">
                 <StatusBadge status={p.status} />
                 {p.status === "connected" ? (
-                  <button
-                    className="btn-ghost"
+                  <IconButton
+                    variant="ghost"
+                    size="1"
                     onClick={() => disconnect(p.id)}
-                    style={{ color: "var(--fg-subtle)", padding: "4px 8px" }}
                     title="中斷連接"
+                    color="gray"
                   >
                     <Trash2 size={13} />
-                  </button>
+                  </IconButton>
                 ) : (
-                  <button className="btn-primary" style={{ height: 30, fontSize: 12 }}>
+                  <Button variant="solid" color="green" size="1">
                     連接
-                  </button>
+                  </Button>
                 )}
-              </div>
-            </div>
+              </Flex>
+            </Flex>
 
             {/* Connected detail */}
             {p.status === "connected" && (
-              <div style={{ padding: "14px 20px", background: "var(--sl1)" }}>
+              <Box style={{ padding: "14px 20px", background: "var(--gray-2)" }}>
                 <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 16 }}>
                   {/* Account */}
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-subtle)", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 4 }}>
+                    <Text size="1" weight="bold" style={{ color: "var(--gray-8)", letterSpacing: "0.04em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>
                       帳號
-                    </div>
-                    <div style={{ fontSize: 13, color: "var(--fg)" }}>{p.account}</div>
+                    </Text>
+                    <Text size="2" style={{ color: "var(--gray-12)" }}>{p.account}</Text>
                   </div>
 
                   {/* Folder */}
                   <div>
-                    <div style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-subtle)", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 4 }}>
+                    <Text size="1" weight="bold" style={{ color: "var(--gray-8)", letterSpacing: "0.04em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>
                       根目錄
-                    </div>
-                    <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
-                      <FolderOpen size={13} color="var(--fg-muted)" />
-                      <span style={{ fontSize: 13, color: "var(--fg)" }}>{p.folder}</span>
-                      <ExternalLink size={11} color="var(--fg-subtle)" style={{ cursor: "pointer" }} />
-                    </div>
+                    </Text>
+                    <Flex align="center" gap="2">
+                      <FolderOpen size={13} color="var(--gray-9)" />
+                      <Text size="2" style={{ color: "var(--gray-12)" }}>{p.folder}</Text>
+                      <ExternalLink size={11} color="var(--gray-8)" style={{ cursor: "pointer" }} />
+                    </Flex>
                   </div>
 
                   {/* Usage */}
                   {p.usedBytes && (
                     <div>
-                      <div style={{ fontSize: 11, fontWeight: 600, color: "var(--fg-subtle)", letterSpacing: "0.04em", textTransform: "uppercase", marginBottom: 4 }}>
+                      <Text size="1" weight="bold" style={{ color: "var(--gray-8)", letterSpacing: "0.04em", textTransform: "uppercase", display: "block", marginBottom: 4 }}>
                         已用空間
-                      </div>
-                      <div style={{ fontSize: 13, color: "var(--fg)" }}>{formatBytes(p.usedBytes)}</div>
+                      </Text>
+                      <Text size="2" style={{ color: "var(--gray-12)" }}>{formatBytes(p.usedBytes)}</Text>
                     </div>
                   )}
                 </div>
 
                 {/* Actions */}
-                <div style={{ display: "flex", gap: 8, marginTop: 14 }}>
-                  <button className="btn-outline" style={{ height: 28, fontSize: 12, gap: 5 }}>
+                <Flex gap="2" mt="3">
+                  <Button variant="outline" size="1" style={{ gap: 5 }}>
                     <FolderOpen size={12} />
                     變更資料夾
-                  </button>
-                  <button className="btn-outline" style={{ height: 28, fontSize: 12, gap: 5 }}>
+                  </Button>
+                  <Button variant="outline" size="1" style={{ gap: 5 }}>
                     <RefreshCw size={12} />
                     重新授權
-                  </button>
-                </div>
-              </div>
+                  </Button>
+                </Flex>
+              </Box>
             )}
-          </div>
+          </Box>
         ))}
-      </div>
+      </Flex>
 
       {/* Note */}
-      <div style={{
-        marginTop: 20, padding: "12px 16px", borderRadius: 7,
-        background: "var(--sl2)", border: "1px solid var(--border)",
-        fontSize: 12, color: "var(--fg-subtle)", lineHeight: 1.6,
+      <Box mt="4" p="3" style={{
+        borderRadius: 7,
+        background: "var(--gray-3)", border: "1px solid var(--gray-6)",
+        fontSize: 12, color: "var(--gray-9)", lineHeight: 1.6,
       }}>
-        💡 可同時連接多個 storage。每個信箱帳號可選擇要存到哪個 storage，預設使用第一個已連接的服務。
-      </div>
+        可同時連接多個 storage。每個信箱帳號可選擇要存到哪個 storage，預設使用第一個已連接的服務。
+      </Box>
     </div>
   );
 }

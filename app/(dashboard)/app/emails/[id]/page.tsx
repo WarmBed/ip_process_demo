@@ -10,6 +10,7 @@ import {
   FileText, FileImage, File, UserCheck, RotateCcw, MessageSquare,
   Bot, ChevronRight,
 } from "lucide-react";
+import { Button, Badge, IconButton } from "@radix-ui/themes";
 import type { ApiResponse, Classification, Attachment } from "@/lib/types";
 import type { EmailDetail, DriveFile } from "@/lib/mock-data";
 
@@ -40,10 +41,10 @@ const STORAGE_LABELS: Record<string, string> = {
 };
 
 function FileIcon({ contentType }: { contentType: string }) {
-  if (contentType.includes("pdf")) return <FileText size={16} color="#ef4444" />;
-  if (contentType.includes("image")) return <FileImage size={16} color="#3b82f6" />;
-  if (contentType.includes("word") || contentType.includes("document")) return <FileText size={16} color="#2563eb" />;
-  return <File size={16} color="var(--fg-muted)" />;
+  if (contentType.includes("pdf")) return <FileText size={16} color="var(--red-9)" />;
+  if (contentType.includes("image")) return <FileImage size={16} color="var(--blue-9)" />;
+  if (contentType.includes("word") || contentType.includes("document")) return <FileText size={16} color="var(--blue-9)" />;
+  return <File size={16} color="var(--gray-11)" />;
 }
 
 function formatBytes(b: number) {
@@ -106,7 +107,7 @@ const AVATAR_COLORS: Record<string, string> = {
 };
 
 function Avatar({ name, code }: { name: string; code?: string }) {
-  const bg = code ? (AVATAR_COLORS[code] ?? "#6b7280") : "#6b7280";
+  const bg = code ? (AVATAR_COLORS[code] ?? "var(--gray-9)") : "var(--gray-9)";
   return (
     <div style={{ width: 32, height: 32, borderRadius: "50%", background: bg + "22", border: `1.5px solid ${bg}40`, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
       <span style={{ fontSize: 12, fontWeight: 700, color: bg }}>{name[0]?.toUpperCase() ?? "?"}</span>
@@ -146,7 +147,7 @@ export default function EmailDetailPage({ params }: { params: Promise<{ id: stri
   }, [id]);
 
   if (loading) return <Loading pad={60} />;
-  if (!detail)  return <div style={{ padding: 40, textAlign: "center", color: "var(--fg-subtle)" }}>找不到此信件</div>;
+  if (!detail)  return <div style={{ padding: 40, textAlign: "center", color: "var(--gray-9)" }}>找不到此信件</div>;
 
   const { email, classification: cls, attachments } = detail;
   const thread    = MOCK_THREADS[id] ?? DEFAULT_THREAD(id, email);
@@ -164,29 +165,29 @@ export default function EmailDetailPage({ params }: { params: Promise<{ id: stri
     <div style={{ padding: "20px 28px", maxWidth: 960 }}>
 
       {/* Back + subject */}
-      <Link href="/app/emails" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--fg-muted)", marginBottom: 14, textDecoration: "none" }}>
+      <Link href="/app/emails" style={{ display: "inline-flex", alignItems: "center", gap: 6, fontSize: 13, color: "var(--gray-11)", marginBottom: 14, textDecoration: "none" }}>
         <ArrowLeft size={14} /> 返回信件列表
       </Link>
-      <h1 style={{ fontSize: 17, fontWeight: 600, color: "var(--fg)", margin: "0 0 16px", lineHeight: 1.4, letterSpacing: "-0.02em" }}>
+      <h1 style={{ fontSize: 17, fontWeight: 600, color: "var(--gray-12)", margin: "0 0 16px", lineHeight: 1.4, letterSpacing: "-0.02em" }}>
         {email.subject}
       </h1>
 
       {/* ── AI Thread Summary ── */}
       {aiSummary && (
-        <div style={{ marginBottom: 18, border: "1px solid #c7d2fe", borderRadius: 10, overflow: "hidden", background: "#eef2ff" }}>
-          <div style={{ padding: "10px 16px", borderBottom: "1px solid #c7d2fe", display: "flex", alignItems: "center", gap: 8, background: "#e0e7ff" }}>
-            <Bot size={14} color="#4338ca" />
-            <span style={{ fontSize: 12, fontWeight: 700, color: "#3730a3" }}>AI 對話摘要</span>
-            <span style={{ fontSize: 11, color: "#6366f1", marginLeft: 4 }}>
+        <div style={{ marginBottom: 18, border: "1px solid var(--violet-6)", borderRadius: 6, overflow: "hidden", background: "var(--violet-2)" }}>
+          <div style={{ padding: "10px 16px", borderBottom: "1px solid var(--violet-6)", display: "flex", alignItems: "center", gap: 8, background: "var(--violet-3)" }}>
+            <Bot size={14} color="var(--violet-11)" />
+            <span style={{ fontSize: 12, fontWeight: 700, color: "var(--violet-11)" }}>AI 對話摘要</span>
+            <span style={{ fontSize: 11, color: "var(--violet-9)", marginLeft: 4 }}>
               {aiSummary.count} 封信 · 跨越 {aiSummary.span}
             </span>
           </div>
           <div style={{ padding: "12px 16px" }}>
-            <p style={{ fontSize: 13, color: "#312e81", lineHeight: 1.7, margin: 0 }}
+            <p style={{ fontSize: 13, color: "var(--violet-12)", lineHeight: 1.7, margin: 0 }}
               dangerouslySetInnerHTML={{ __html: aiSummary.text.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }}
             />
             {aiSummary.action && (
-              <div style={{ marginTop: 8, padding: "7px 10px", background: "#4338ca15", borderRadius: 6, borderLeft: "3px solid #4338ca", fontSize: 12, color: "#3730a3" }}
+              <div style={{ marginTop: 8, padding: "7px 10px", background: "var(--violet-3)", borderRadius: 6, borderLeft: "3px solid var(--violet-9)", fontSize: 12, color: "var(--violet-11)" }}
                 dangerouslySetInnerHTML={{ __html: aiSummary.action.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>") }}
               />
             )}
@@ -202,7 +203,7 @@ export default function EmailDetailPage({ params }: { params: Promise<{ id: stri
 
           {/* Classification bar */}
           {cls && (
-            <div style={{ padding: "8px 14px", background: "var(--sl2)", border: "1px solid var(--border)", borderRadius: 8, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
+            <div style={{ padding: "8px 14px", background: "var(--gray-2)", border: "1px solid var(--gray-6)", borderRadius: 6, display: "flex", alignItems: "center", gap: 12, flexWrap: "wrap", marginBottom: 12 }}>
               {(() => {
                 const color = CODE_COLORS[cls.direction_code] ?? "#57534e";
                 return (
@@ -212,53 +213,61 @@ export default function EmailDetailPage({ params }: { params: Promise<{ id: stri
                 );
               })()}
               {cls.case_numbers.map(c => (
-                <span key={c} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--fg-muted)" }}>
+                <span key={c} style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "var(--gray-11)" }}>
                   <Hash size={11} /><span style={{ fontFamily: "ui-monospace, monospace" }}>{c}</span>
                 </span>
               ))}
-              {cls.status === "confirmed" && <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#166534", marginLeft: "auto" }}><CheckCircle size={12} /> 已確認</span>}
-              {cls.status === "pending"   && <span style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, color: "#854d0e", marginLeft: "auto" }}><AlertCircle size={12} /> 待確認</span>}
+              {cls.status === "confirmed" && (
+                <span style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
+                  <Badge variant="soft" color="green" size="1"><CheckCircle size={10} style={{ marginRight: 2 }} /> 已確認</Badge>
+                </span>
+              )}
+              {cls.status === "pending" && (
+                <span style={{ display: "flex", alignItems: "center", gap: 4, marginLeft: "auto" }}>
+                  <Badge variant="soft" color="orange" size="1"><AlertCircle size={10} style={{ marginRight: 2 }} /> 待確認</Badge>
+                </span>
+              )}
             </div>
           )}
 
           {/* Thread messages */}
-          <div style={{ display: "flex", flexDirection: "column", gap: 0, border: "1px solid var(--border)", borderRadius: 10, overflow: "hidden" }}>
-            <div style={{ padding: "9px 14px", background: "var(--sl2)", borderBottom: "1px solid var(--border)", display: "flex", alignItems: "center", gap: 6 }}>
-              <MessageSquare size={13} color="var(--fg-muted)" />
-              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--fg)" }}>對話紀錄</span>
-              <span style={{ fontSize: 11, color: "var(--fg-subtle)", background: "var(--sl4)", padding: "0 6px", borderRadius: 4 }}>{thread.length} 封</span>
+          <div style={{ display: "flex", flexDirection: "column", gap: 0, border: "1px solid var(--gray-6)", borderRadius: 6, overflow: "hidden" }}>
+            <div style={{ padding: "9px 14px", background: "var(--gray-2)", borderBottom: "1px solid var(--gray-6)", display: "flex", alignItems: "center", gap: 6 }}>
+              <MessageSquare size={13} color="var(--gray-11)" />
+              <span style={{ fontSize: 12, fontWeight: 600, color: "var(--gray-12)" }}>對話紀錄</span>
+              <Badge variant="soft" color="gray" size="1">{thread.length} 封</Badge>
             </div>
 
             {thread.map((msg, idx) => {
               const isExpanded  = expandedMsgs.has(msg.id);
               const isCurrent   = msg.isCurrent;
               const isLast      = idx === thread.length - 1;
-              const codeClr     = CODE_COLORS[msg.direction_code ?? ""] ?? "#6b7280";
+              const codeClr     = CODE_COLORS[msg.direction_code ?? ""] ?? "var(--gray-9)";
               const body        = isCurrent
                 ? (email.body_html ? email.body_html.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim() : email.body_text ?? "")
                 : msg.body;
               const fmt = (iso: string) => new Date(iso).toLocaleString("zh-TW", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" });
 
               return (
-                <div key={msg.id} style={{ borderBottom: isLast ? "none" : "1px solid var(--border)", background: isCurrent ? "var(--bg)" : "var(--sl1)" }}>
+                <div key={msg.id} style={{ borderBottom: isLast ? "none" : "1px solid var(--gray-6)", background: isCurrent ? "var(--color-background)" : "var(--gray-2)" }}>
 
                   {/* Message header - always visible */}
                   <div
                     onClick={() => toggleMsg(msg.id)}
-                    style={{ padding: "11px 16px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", transition: "background 0.1s" }}
-                    onMouseEnter={el => (el.currentTarget.style.background = "rgba(0,0,0,0.02)")}
+                    style={{ padding: "11px 16px", display: "flex", alignItems: "center", gap: 10, cursor: "pointer", transition: "background 0.12s" }}
+                    onMouseEnter={el => (el.currentTarget.style.background = "var(--gray-3)")}
                     onMouseLeave={el => (el.currentTarget.style.background = "transparent")}
                   >
                     <Avatar name={msg.from} code={msg.direction_code} />
                     <div style={{ flex: 1, minWidth: 0 }}>
                       <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 2 }}>
-                        <span style={{ fontSize: 13, fontWeight: isCurrent ? 600 : 500, color: "var(--fg)" }}>{msg.from}</span>
-                        <span style={{ fontSize: 11, color: "var(--fg-subtle)" }}>&lt;{msg.from_email}&gt;</span>
-                        {isCurrent && <span style={{ fontSize: 10, fontWeight: 600, color: "#4338ca", background: "#eef2ff", padding: "1px 6px", borderRadius: 4 }}>本封</span>}
+                        <span style={{ fontSize: 13, fontWeight: isCurrent ? 600 : 500, color: "var(--gray-12)" }}>{msg.from}</span>
+                        <span style={{ fontSize: 11, color: "var(--gray-9)" }}>&lt;{msg.from_email}&gt;</span>
+                        {isCurrent && <Badge variant="soft" color="violet" size="1">本封</Badge>}
                       </div>
                       {!isExpanded && (
-                        <div style={{ fontSize: 12, color: "var(--fg-subtle)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {body.slice(0, 100)}{body.length > 100 ? "…" : ""}
+                        <div style={{ fontSize: 12, color: "var(--gray-9)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                          {body.slice(0, 100)}{body.length > 100 ? "..." : ""}
                         </div>
                       )}
                     </div>
@@ -268,16 +277,16 @@ export default function EmailDetailPage({ params }: { params: Promise<{ id: stri
                           {msg.direction_code}
                         </span>
                       )}
-                      <span style={{ fontSize: 11, color: "var(--fg-subtle)", minWidth: 80, textAlign: "right" }}>{fmt(msg.date)}</span>
-                      {isExpanded ? <ChevronUp size={13} color="var(--fg-subtle)" /> : <ChevronDown size={13} color="var(--fg-subtle)" />}
+                      <span style={{ fontSize: 11, color: "var(--gray-9)", minWidth: 80, textAlign: "right" }}>{fmt(msg.date)}</span>
+                      {isExpanded ? <ChevronUp size={13} color="var(--gray-9)" /> : <ChevronDown size={13} color="var(--gray-9)" />}
                     </div>
                   </div>
 
                   {/* Expanded body */}
                   {isExpanded && (
-                    <div style={{ borderTop: "1px solid var(--border)", background: "var(--bg)" }}>
+                    <div style={{ borderTop: "1px solid var(--gray-6)", background: "var(--color-background)" }}>
                       {/* Full headers */}
-                      <div style={{ padding: "10px 16px 8px", display: "flex", flexDirection: "column", gap: 4, borderBottom: "1px solid var(--border)", background: "var(--sl1)" }}>
+                      <div style={{ padding: "10px 16px 8px", display: "flex", flexDirection: "column", gap: 4, borderBottom: "1px solid var(--gray-6)", background: "var(--gray-2)" }}>
                         {[
                           { label: "寄件人", value: `${msg.from} <${msg.from_email}>` },
                           { label: "時間",   value: new Date(msg.date).toLocaleString("zh-TW", { year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit" }) },
@@ -287,24 +296,24 @@ export default function EmailDetailPage({ params }: { params: Promise<{ id: stri
                           }] : []),
                         ].map(({ label, value }) => (
                           <div key={label} style={{ display: "flex", gap: 10, fontSize: 12 }}>
-                            <span style={{ color: "var(--fg-subtle)", minWidth: 48, flexShrink: 0 }}>{label}</span>
-                            <span style={{ color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</span>
+                            <span style={{ color: "var(--gray-9)", minWidth: 48, flexShrink: 0 }}>{label}</span>
+                            <span style={{ color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{value}</span>
                           </div>
                         ))}
                       </div>
 
                       {/* Body */}
-                      <div style={{ padding: "16px 18px", fontSize: 13, lineHeight: 1.75, color: "var(--fg)", whiteSpace: "pre-wrap" }}>
+                      <div style={{ padding: "16px 18px", fontSize: 13, lineHeight: 1.75, color: "var(--gray-12)", whiteSpace: "pre-wrap" }}>
                         {isCurrent && email.body_html
                           ? <div dangerouslySetInnerHTML={{ __html: email.body_html }} />
-                          : body || <span style={{ color: "var(--fg-subtle)" }}>（無內容）</span>
+                          : body || <span style={{ color: "var(--gray-9)" }}>(no content)</span>
                         }
                       </div>
 
                       {/* Attachments (current email only) */}
                       {isCurrent && attachments.length > 0 && (
                         <div style={{ padding: "0 16px 14px", display: "flex", flexDirection: "column", gap: 6 }}>
-                          <div style={{ fontSize: 11, color: "var(--fg-subtle)", fontWeight: 600, marginBottom: 2 }}>
+                          <div style={{ fontSize: 11, color: "var(--gray-9)", fontWeight: 600, marginBottom: 2 }}>
                             <Paperclip size={11} style={{ marginRight: 4 }} />附件（{attachments.length}）
                           </div>
                           {attachments.map(att => <AttachmentRow key={att.id} attachment={att} />)}
@@ -346,12 +355,12 @@ export default function EmailDetailPage({ params }: { params: Promise<{ id: stri
             </Section>
           )}
 
-          <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-            <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--border)", background: "var(--sl2)", fontSize: 12, fontWeight: 600, color: "var(--fg)" }}>EML 歸檔位置</div>
+          <div style={{ border: "1px solid var(--gray-6)", borderRadius: 6, overflow: "hidden" }}>
+            <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--gray-6)", background: "var(--gray-2)", fontSize: 12, fontWeight: 600, color: "var(--gray-12)" }}>EML 歸檔位置</div>
             <div style={{ padding: "12px 14px" }}>
               {attachments.length > 0
                 ? <StoragePath provider={attachments[0].storage_provider} path={attachments[0].storage_path.replace(/[^/]+$/, "").replace(/\/$/, "")} url={attachments[0].storage_url} />
-                : <span style={{ fontSize: 12, color: "var(--fg-subtle)" }}>尚未歸檔</span>}
+                : <span style={{ fontSize: 12, color: "var(--gray-9)" }}>尚未歸檔</span>}
             </div>
           </div>
         </div>
@@ -364,10 +373,10 @@ export default function EmailDetailPage({ params }: { params: Promise<{ id: stri
 
 function Section({ title, expanded, onToggle, children }: { title: string; expanded: boolean; onToggle: () => void; children: React.ReactNode }) {
   return (
-    <div style={{ border: "1px solid var(--border)", borderRadius: 8, overflow: "hidden" }}>
-      <button onClick={onToggle} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "var(--sl2)", border: "none", borderBottom: expanded ? "1px solid var(--border)" : "none", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "var(--fg)" }}>
+    <div style={{ border: "1px solid var(--gray-6)", borderRadius: 6, overflow: "hidden" }}>
+      <button onClick={onToggle} style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", padding: "10px 14px", background: "var(--gray-2)", border: "none", borderBottom: expanded ? "1px solid var(--gray-6)" : "none", cursor: "pointer", fontSize: 12, fontWeight: 600, color: "var(--gray-12)" }}>
         {title}
-        {expanded ? <ChevronUp size={13} color="var(--fg-subtle)" /> : <ChevronDown size={13} color="var(--fg-subtle)" />}
+        {expanded ? <ChevronUp size={13} color="var(--gray-9)" /> : <ChevronDown size={13} color="var(--gray-9)" />}
       </button>
       {expanded && children}
     </div>
@@ -376,20 +385,22 @@ function Section({ title, expanded, onToggle, children }: { title: string; expan
 
 function AttachmentRow({ attachment: att }: { attachment: Attachment }) {
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", border: "1px solid var(--border)", borderRadius: 7, background: "var(--sl1)" }}>
+    <div style={{ display: "flex", alignItems: "center", gap: 10, padding: "9px 12px", border: "1px solid var(--gray-6)", borderRadius: 6, background: "var(--gray-2)" }}>
       <FileIcon contentType={att.content_type} />
       <div style={{ flex: 1, minWidth: 0 }}>
-        <div style={{ fontSize: 13, color: "var(--fg)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.filename}</div>
-        <div style={{ fontSize: 11, color: "var(--fg-subtle)", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
+        <div style={{ fontSize: 13, color: "var(--gray-12)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.filename}</div>
+        <div style={{ fontSize: 11, color: "var(--gray-9)", marginTop: 2, display: "flex", alignItems: "center", gap: 6 }}>
           <span>{formatBytes(att.size_bytes)}</span>
           <span>·</span>
           <span style={{ display: "flex", alignItems: "center", gap: 3 }}>{STORAGE_ICONS[att.storage_provider]}{STORAGE_LABELS[att.storage_provider] ?? att.storage_provider}</span>
         </div>
-        <div style={{ marginTop: 3, fontSize: 10, color: "var(--fg-subtle)", fontFamily: "ui-monospace, monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.storage_path}</div>
+        <div style={{ marginTop: 3, fontSize: 10, color: "var(--gray-9)", fontFamily: "ui-monospace, monospace", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{att.storage_path}</div>
       </div>
       {att.storage_url && (
-        <a href={att.storage_url} target="_blank" rel="noreferrer" className="btn-outline" style={{ height: 28, padding: "0 10px", fontSize: 11, gap: 4, flexShrink: 0 }}>
-          <ExternalLink size={11} /> 開啟
+        <a href={att.storage_url} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+          <Button variant="outline" color="gray" size="1" style={{ gap: 4, flexShrink: 0, cursor: "pointer" }}>
+            <ExternalLink size={11} /> 開啟
+          </Button>
         </a>
       )}
     </div>
@@ -399,23 +410,23 @@ function AttachmentRow({ attachment: att }: { attachment: Attachment }) {
 function ClassificationPanel({ cls }: { cls: Classification }) {
   const color = CODE_COLORS[cls.direction_code] ?? "#57534e";
   const confidence = Math.round(cls.confidence * 100);
-  const confColor = confidence >= 90 ? "var(--green)" : confidence >= 70 ? "var(--yellow)" : "var(--red)";
+  const confColor = confidence >= 90 ? "var(--green-9)" : confidence >= 70 ? "var(--amber-9)" : "var(--red-9)";
   return (
     <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 12 }}>
       <div>
-        <div style={{ fontSize: 10, fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>語義名</div>
-        <div style={{ fontSize: 13, color: "var(--fg)", fontWeight: 500 }}>{cls.semantic_name || "—"}</div>
+        <div style={{ fontSize: 10, fontWeight: 600, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>語義名</div>
+        <div style={{ fontSize: 13, color: "var(--gray-12)", fontWeight: 500 }}>{cls.semantic_name || "—"}</div>
       </div>
       <div>
-        <div style={{ fontSize: 10, fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>收發碼</div>
+        <div style={{ fontSize: 10, fontWeight: 600, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>收發碼</div>
         <span style={{ padding: "2px 10px", borderRadius: 5, fontSize: 12, fontWeight: 600, background: color + "15", color, border: `1px solid ${color}30` }}>
           {cls.direction_code} · {CODE_LABELS[cls.direction_code]}
         </span>
       </div>
       <div>
-        <div style={{ fontSize: 10, fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>信心分數</div>
+        <div style={{ fontSize: 10, fontWeight: 600, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>信心分數</div>
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{ flex: 1, height: 6, background: "var(--sl4)", borderRadius: 3, overflow: "hidden" }}>
+          <div style={{ flex: 1, height: 6, background: "var(--gray-4)", borderRadius: 3, overflow: "hidden" }}>
             <div style={{ width: `${confidence}%`, height: "100%", background: confColor, borderRadius: 3 }} />
           </div>
           <span style={{ fontSize: 12, fontWeight: 600, color: confColor, minWidth: 32 }}>{confidence}%</span>
@@ -423,21 +434,21 @@ function ClassificationPanel({ cls }: { cls: Classification }) {
       </div>
       {cls.selected_deadline && (
         <div>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>行動期限</div>
-          <div style={{ fontSize: 13, color: "var(--fg)", display: "flex", alignItems: "center", gap: 5 }}>
-            <Clock size={12} color="var(--fg-subtle)" />
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 4 }}>行動期限</div>
+          <div style={{ fontSize: 13, color: "var(--gray-12)", display: "flex", alignItems: "center", gap: 5 }}>
+            <Clock size={12} color="var(--gray-9)" />
             {new Date(cls.selected_deadline).toLocaleDateString("zh-TW", { year: "numeric", month: "long", day: "numeric" })}
           </div>
         </div>
       )}
       {cls.dates_found.length > 0 && (
         <div>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--fg-subtle)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>偵測到的日期</div>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--gray-9)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>偵測到的日期</div>
           <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
             {cls.dates_found.map((d, i) => (
-              <div key={i} style={{ fontSize: 11, color: "var(--fg-muted)", display: "flex", gap: 6 }}>
-                <span style={{ fontFamily: "ui-monospace, monospace", color: "var(--fg)" }}>{d.date}</span>
-                <span style={{ color: "var(--fg-subtle)" }}>·</span>
+              <div key={i} style={{ fontSize: 11, color: "var(--gray-11)", display: "flex", gap: 6 }}>
+                <span style={{ fontFamily: "ui-monospace, monospace", color: "var(--gray-12)" }}>{d.date}</span>
+                <span style={{ color: "var(--gray-9)" }}>·</span>
                 <span>{d.type === "official_deadline" ? "官方期限" : d.type === "our_request" ? "我方要求" : d.type === "counterpart_eta" ? "對方預計" : "背景日期"}</span>
               </div>
             ))}
@@ -451,9 +462,15 @@ function ClassificationPanel({ cls }: { cls: Classification }) {
 function StoragePath({ provider, path, url }: { provider: string; path: string; url?: string }) {
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
-      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>{STORAGE_ICONS[provider]}<span style={{ fontSize: 12, fontWeight: 500, color: "var(--fg)" }}>{STORAGE_LABELS[provider]}</span></div>
-      <div style={{ fontSize: 11, color: "var(--fg-subtle)", fontFamily: "ui-monospace, monospace", lineHeight: 1.5, wordBreak: "break-all" }}>{path}</div>
-      {url && <a href={url} target="_blank" rel="noreferrer" className="btn-outline" style={{ height: 26, fontSize: 11, gap: 4, width: "fit-content" }}><ExternalLink size={11} />在 {STORAGE_LABELS[provider]} 中開啟</a>}
+      <div style={{ display: "flex", alignItems: "center", gap: 6 }}>{STORAGE_ICONS[provider]}<span style={{ fontSize: 12, fontWeight: 500, color: "var(--gray-12)" }}>{STORAGE_LABELS[provider]}</span></div>
+      <div style={{ fontSize: 11, color: "var(--gray-9)", fontFamily: "ui-monospace, monospace", lineHeight: 1.5, wordBreak: "break-all" }}>{path}</div>
+      {url && (
+        <a href={url} target="_blank" rel="noreferrer" style={{ textDecoration: "none", width: "fit-content" }}>
+          <Button variant="outline" color="gray" size="1" style={{ gap: 4, cursor: "pointer" }}>
+            <ExternalLink size={11} />在 {STORAGE_LABELS[provider]} 中開啟
+          </Button>
+        </a>
+      )}
     </div>
   );
 }
@@ -466,9 +483,10 @@ function ReviewPanel({ emailId, currentCode, reviewDone, onReviewed }: { emailId
   const [saving, setSaving] = useState(false);
 
   if (reviewDone) return (
-    <div style={{ border: "1px solid #bbf7d0", borderRadius: 8, overflow: "hidden", background: "#f0fdf4" }}>
+    <div style={{ border: "1px solid var(--green-6)", borderRadius: 6, overflow: "hidden", background: "var(--green-2)" }}>
       <div style={{ padding: "10px 14px", display: "flex", alignItems: "center", gap: 7 }}>
-        <CheckCircle size={14} color="#166534" /><span style={{ fontSize: 13, fontWeight: 600, color: "#166534" }}>已完成人工審核</span>
+        <CheckCircle size={14} color="var(--green-11)" />
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--green-11)" }}>已完成人工審核</span>
       </div>
     </div>
   );
@@ -481,41 +499,41 @@ function ReviewPanel({ emailId, currentCode, reviewDone, onReviewed }: { emailId
   };
 
   return (
-    <div style={{ border: "1px solid #fde68a", borderRadius: 8, overflow: "hidden", background: "#fffbeb" }}>
-      <div style={{ padding: "10px 14px", borderBottom: "1px solid #fde68a", background: "#fef3c7", display: "flex", alignItems: "center", gap: 7 }}>
-        <AlertCircle size={13} color="#b45309" />
-        <span style={{ fontSize: 12, fontWeight: 700, color: "#92400e" }}>待人工審核</span>
+    <div style={{ border: "1px solid var(--amber-6)", borderRadius: 6, overflow: "hidden", background: "var(--amber-2)" }}>
+      <div style={{ padding: "10px 14px", borderBottom: "1px solid var(--amber-6)", background: "var(--amber-3)", display: "flex", alignItems: "center", gap: 7 }}>
+        <AlertCircle size={13} color="var(--orange-11)" />
+        <span style={{ fontSize: 12, fontWeight: 700, color: "var(--orange-11)" }}>待人工審核</span>
       </div>
       <div style={{ padding: "14px", display: "flex", flexDirection: "column", gap: 12 }}>
         <div>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "#92400e", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>收發碼</div>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--orange-11)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6 }}>收發碼</div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 4 }}>
             {ALL_CODES.map(c => {
               const color = CODE_COLORS[c] ?? "#57534e";
               const active = c === code;
               return (
-                <button key={c} onClick={() => setCode(c)} style={{ padding: "3px 10px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", transition: "all 0.1s", background: active ? color : color + "12", color: active ? "#fff" : color, border: `1px solid ${color}40` }}>
+                <button key={c} onClick={() => setCode(c)} style={{ padding: "3px 10px", borderRadius: 5, fontSize: 11, fontWeight: 600, cursor: "pointer", transition: "all 0.12s", background: active ? color : color + "12", color: active ? "#fff" : color, border: `1px solid ${color}40` }}>
                   {c}
                 </button>
               );
             })}
           </div>
-          <div style={{ marginTop: 5, fontSize: 11, color: "#92400e" }}>{CODE_LABELS[code]}</div>
+          <div style={{ marginTop: 5, fontSize: 11, color: "var(--orange-11)" }}>{CODE_LABELS[code]}</div>
         </div>
         <div>
-          <div style={{ fontSize: 10, fontWeight: 600, color: "#92400e", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}>
+          <div style={{ fontSize: 10, fontWeight: 600, color: "var(--orange-11)", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: 6, display: "flex", alignItems: "center", gap: 4 }}>
             <MessageSquare size={10} />人工評語
           </div>
-          <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="說明分類原因或補充備注（選填）…" rows={3}
-            style={{ width: "100%", boxSizing: "border-box", border: "1px solid #fcd34d", borderRadius: 6, padding: "7px 10px", fontSize: 12, lineHeight: 1.5, background: "#fff", color: "var(--fg)", resize: "vertical", outline: "none", fontFamily: "inherit" }} />
+          <textarea value={note} onChange={e => setNote(e.target.value)} placeholder="說明分類原因或補充備注（選填）..." rows={3}
+            style={{ width: "100%", boxSizing: "border-box", border: "1px solid var(--amber-6)", borderRadius: 6, padding: "7px 10px", fontSize: 12, lineHeight: 1.5, background: "var(--color-background)", color: "var(--gray-12)", resize: "vertical", outline: "none", fontFamily: "inherit" }} />
         </div>
         <div style={{ display: "flex", gap: 6 }}>
-          <button onClick={() => handleSubmit("confirmed")} disabled={saving} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px 0", borderRadius: 6, border: "none", background: "#166534", color: "#fff", fontSize: 12, fontWeight: 600, cursor: saving ? "wait" : "pointer", opacity: saving ? 0.7 : 1 }}>
+          <Button variant="solid" color="green" onClick={() => handleSubmit("confirmed")} disabled={saving} style={{ flex: 1, gap: 5, cursor: saving ? "wait" : "pointer", opacity: saving ? 0.7 : 1 }}>
             <UserCheck size={13} />確認歸檔
-          </button>
-          <button onClick={() => handleSubmit("corrected")} disabled={saving || code === currentCode} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 5, padding: "7px 0", borderRadius: 6, border: "1px solid #d97706", background: "#fff", color: "#b45309", fontSize: 12, fontWeight: 600, cursor: (saving || code === currentCode) ? "not-allowed" : "pointer", opacity: (saving || code === currentCode) ? 0.5 : 1 }}>
+          </Button>
+          <Button variant="outline" color="orange" onClick={() => handleSubmit("corrected")} disabled={saving || code === currentCode} style={{ flex: 1, gap: 5, cursor: (saving || code === currentCode) ? "not-allowed" : "pointer", opacity: (saving || code === currentCode) ? 0.5 : 1 }}>
             <RotateCcw size={12} />修正碼 → {code}
-          </button>
+          </Button>
         </div>
       </div>
     </div>
@@ -523,10 +541,10 @@ function ReviewPanel({ emailId, currentCode, reviewDone, onReviewed }: { emailId
 }
 
 const MIME_ICON: Record<string, React.ReactNode> = {
-  "application/pdf": <FileText size={15} color="#ef4444" />,
-  "message/rfc822":  <FileText size={15} color="#6366f1" />,
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": <FileText size={15} color="#2563eb" />,
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": <FileText size={15} color="#16a34a" />,
+  "application/pdf": <FileText size={15} color="var(--red-9)" />,
+  "message/rfc822":  <FileText size={15} color="var(--violet-9)" />,
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document": <FileText size={15} color="var(--blue-9)" />,
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet": <FileText size={15} color="var(--green-9)" />,
 };
 const CODE_CHIP_COLORS: Record<string, string> = {
   FA: "#1e40af", FC: "#166534", TA: "#7c3aed", TC: "#92400e",
@@ -539,11 +557,11 @@ function DriveFilesSection({ files, currentEmailId }: { files: DriveFile[]; curr
     <div style={{ padding: "12px 14px", display: "flex", flexDirection: "column", gap: 16 }}>
       {Object.entries(byCaseNumber).map(([caseNum, caseFiles]) => (
         <div key={caseNum}>
-          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, paddingBottom: 6, borderBottom: "1px solid var(--border)" }}>
-            <Hash size={12} color="var(--fg-subtle)" />
-            <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "ui-monospace, monospace", color: "var(--fg)" }}>{caseNum}</span>
-            <span style={{ fontSize: 11, color: "var(--fg-subtle)" }}>· {caseFiles.length} 個檔案</span>
-            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--fg-subtle)" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 8, marginBottom: 8, paddingBottom: 6, borderBottom: "1px solid var(--gray-6)" }}>
+            <Hash size={12} color="var(--gray-9)" />
+            <span style={{ fontSize: 12, fontWeight: 600, fontFamily: "ui-monospace, monospace", color: "var(--gray-12)" }}>{caseNum}</span>
+            <span style={{ fontSize: 11, color: "var(--gray-9)" }}>· {caseFiles.length} 個檔案</span>
+            <span style={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 5, fontSize: 11, color: "var(--gray-9)" }}>
               {STORAGE_ICONS[caseFiles[0].provider]}
               {STORAGE_LABELS[caseFiles[0].provider]}
             </span>
@@ -553,21 +571,23 @@ function DriveFilesSection({ files, currentEmailId }: { files: DriveFile[]; curr
               const isCurrentEmail = f.email_id === currentEmailId;
               const codeColor = CODE_CHIP_COLORS[f.direction_code] ?? "#57534e";
               return (
-                <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 6, border: `1px solid ${isCurrentEmail ? "var(--blue-border)" : "var(--border)"}`, background: isCurrentEmail ? "var(--blue-bg)" : "var(--sl1)" }}>
-                  {MIME_ICON[f.mimeType] ?? <File size={15} color="var(--fg-muted)" />}
+                <div key={f.id} style={{ display: "flex", alignItems: "center", gap: 10, padding: "8px 12px", borderRadius: 6, border: `1px solid ${isCurrentEmail ? "var(--blue-6)" : "var(--gray-6)"}`, background: isCurrentEmail ? "var(--blue-2)" : "var(--gray-2)" }}>
+                  {MIME_ICON[f.mimeType] ?? <File size={15} color="var(--gray-11)" />}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontSize: 12, color: "var(--fg)", fontWeight: isCurrentEmail ? 500 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                      {f.name}{isCurrentEmail && <span style={{ marginLeft: 6, fontSize: 10, color: "var(--blue)", fontWeight: 600 }}>← 本信件</span>}
+                    <div style={{ fontSize: 12, color: "var(--gray-12)", fontWeight: isCurrentEmail ? 500 : 400, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                      {f.name}{isCurrentEmail && <span style={{ marginLeft: 6, fontSize: 10, color: "var(--blue-11)", fontWeight: 600 }}>← 本信件</span>}
                     </div>
-                    <div style={{ fontSize: 10, color: "var(--fg-subtle)", marginTop: 2, display: "flex", gap: 8 }}>
+                    <div style={{ fontSize: 10, color: "var(--gray-9)", marginTop: 2, display: "flex", gap: 8 }}>
                       <span>{formatBytes(f.size_bytes)}</span><span>·</span>
                       <span>{new Date(f.created_at).toLocaleDateString("zh-TW", { month: "2-digit", day: "2-digit" })}</span>
-                      {f.email_id && f.email_id !== currentEmailId && (<><span>·</span><Link href={`/app/emails/${f.email_id}`} style={{ color: "var(--fg-muted)", textDecoration: "underline", fontSize: 10 }}>查看來源信件</Link></>)}
+                      {f.email_id && f.email_id !== currentEmailId && (<><span>·</span><Link href={`/app/emails/${f.email_id}`} style={{ color: "var(--gray-11)", textDecoration: "underline", fontSize: 10 }}>查看來源信件</Link></>)}
                     </div>
                   </div>
                   <span style={{ fontSize: 10, fontWeight: 600, padding: "1px 6px", borderRadius: 3, flexShrink: 0, background: codeColor + "15", color: codeColor, border: `1px solid ${codeColor}25` }}>{f.direction_code}</span>
-                  <a href={f.url} target="_blank" rel="noreferrer" className="btn-outline" style={{ height: 26, padding: "0 8px", fontSize: 11, gap: 3, flexShrink: 0 }}>
-                    <ExternalLink size={10} />開啟
+                  <a href={f.url} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}>
+                    <Button variant="outline" color="gray" size="1" style={{ gap: 3, flexShrink: 0, cursor: "pointer" }}>
+                      <ExternalLink size={10} />開啟
+                    </Button>
                   </a>
                 </div>
               );

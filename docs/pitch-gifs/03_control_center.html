@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>IP Winner — 管控中心</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter','Noto Sans TC',sans-serif; background:#ffffff; color:#1c2024; width:1280px; height:720px; overflow:hidden; }
+
+  /* ── Header / Navbar ── */
+  .header { display:flex; align-items:center; justify-content:space-between; padding:0 16px; height:48px; background:#fff; border-bottom:1px solid #e8e8ec; }
+  .header-left { display:flex; align-items:center; gap:16px; }
+  .logo-wrap { display:flex; align-items:center; gap:8px; }
+  .logo-icon { width:26px; height:26px; background:#1c2024; border-radius:6px; display:flex; align-items:center; justify-content:center; }
+  .logo-icon svg { width:14px; height:14px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .logo-text { font-size:14px; font-weight:600; color:#1c2024; }
+  .nav { display:flex; gap:2px; }
+  .nav a { font-size:13px; font-weight:450; color:#60646c; padding:6px 12px; text-decoration:none; border-radius:6px; transition:all .15s; }
+  .nav a:hover { background:#f0f0f3; color:#1c2024; }
+  .nav a.active { background:#f0f0f3; color:#1c2024; font-weight:500; }
+  .header-right { display:flex; align-items:center; gap:10px; font-size:13px; font-weight:450; color:#60646c; }
+  .avatar { width:28px; height:28px; border-radius:50%; background:#6366f1; color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; }
+
+  /* ── Layout ── */
+  .main { display:flex; height:calc(100% - 48px); }
+
+  /* ── AI Sidebar ── */
+  .sidebar { width:220px; background:#1a1a1e; color:#ccc; padding:14px; flex-shrink:0; display:flex; flex-direction:column; }
+  .sidebar-title { font-size:13px; color:#888; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+  .chat-bubble { background:#27272a; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.6; margin-bottom:8px; color:#d4d4d8; border-left:3px solid #6366f1; }
+  .sidebar-suggestions { margin-top:auto; }
+  .suggest-label { font-size:11px; color:#666; margin-bottom:6px; margin-top:10px; }
+  .suggest-btn { display:inline-block; font-size:11px; color:#a1a1aa; background:#27272a; border-radius:6px; padding:4px 10px; margin:2px 4px 2px 0; }
+  .sidebar-input { display:flex; align-items:center; gap:8px; margin-top:12px; padding:8px 12px; background:#27272a; border-radius:8px; }
+  .sidebar-input span { font-size:12px; color:#52525b; }
+
+  .content { flex:1; padding:24px 28px; overflow:hidden; }
+
+  /* ── Tabs ── */
+  .tabs { display:flex; gap:4px; margin-bottom:16px; }
+  .tab { padding:7px 16px; font-size:13px; font-weight:450; border-radius:6px; cursor:pointer; color:#60646c; background:transparent; transition:all .2s; border:1px solid transparent; }
+  .tab.active { color:#1c2024; background:#f0f0f3; font-weight:500; }
+
+  .tab-content { display:none; animation:fadeIn .4s; }
+  .tab-content.active { display:block; }
+  @keyframes fadeIn { from{opacity:0;transform:translateY(6px)} to{opacity:1;transform:translateY(0)} }
+
+  .mini-stats { display:flex; gap:20px; font-size:12px; color:#8b8d98; margin-bottom:14px; }
+  .mini-stats strong { color:#1c2024; }
+
+  /* ── Table ── */
+  .tbl { width:100%; border:1px solid #e8e8ec; border-radius:8px; overflow:hidden; border-collapse:separate; border-spacing:0; }
+  .tbl th { text-align:left; font-size:11px; color:#8b8d98; font-weight:500; padding:9px 14px; background:#f9f9fb; border-bottom:1px solid #e8e8ec; }
+  .tbl td { padding:9px 14px; font-size:13px; border-bottom:1px solid #f0f0f3; }
+  .tbl tr:last-child td { border-bottom:none; }
+  .tbl tr.data { opacity:0; transform:translateY(6px); transition:all .3s; }
+  .tbl tr.data.show { opacity:1; transform:translateY(0); }
+  .tbl tr.highlight td { background:#eff6ff; }
+
+  .tag { display:inline-block; font-size:10px; font-weight:600; padding:2px 8px; border-radius:4px; }
+  .tag-ai { background:#eff6ff; color:#3b82f6; }
+  .tag-manual { background:#f9f9fb; color:#8b8d98; border:1px solid #e8e8ec; }
+  .tag-green { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+  .tag-yellow { background:#fefce8; color:#ca8a04; border:1px solid #fef08a; }
+  .tag-blue { background:#eff6ff; color:#2563eb; border:1px solid #bfdbfe; }
+  .tag-new { background:#eff6ff; color:#6366f1; animation:glow 1.5s infinite; }
+  @keyframes glow { 0%,100%{box-shadow:0 0 0 rgba(99,102,241,0)} 50%{box-shadow:0 0 10px rgba(99,102,241,.15)} }
+
+  .acc { font-family:'Inter',monospace; font-size:12px; }
+  .acc-hi { color:#16a34a; }
+  .acc-mid { color:#ca8a04; }
+  .acc-lo { color:#f97316; }
+
+  .link { font-size:12px; color:#3b82f6; cursor:pointer; margin-right:10px; }
+  .link.muted { color:#cdced6; }
+
+  /* ── Staff ── */
+  .av { width:26px; height:26px; border-radius:50%; display:inline-flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; color:#fff; margin-right:8px; vertical-align:middle; }
+  .prog-bar { height:6px; border-radius:3px; background:#f0f0f3; overflow:hidden; width:140px; }
+  .prog-fill { height:100%; border-radius:3px; transition:width 1s; }
+
+  /* ── Stats ── */
+  .stat-cards { display:flex; border:1px solid #e8e8ec; border-radius:10px; overflow:hidden; margin-bottom:20px; }
+  .stat-card { flex:1; padding:16px 24px; background:#fff; border-right:1px solid #e8e8ec; }
+  .stat-card:last-child { border-right:none; }
+  .stat-label { font-size:12px; color:#8b8d98; font-weight:500; margin-bottom:2px; }
+  .stat-value { font-size:16px; font-weight:700; }
+  .stat-value.green { color:#16a34a; }
+  .stat-value.blue { color:#1d4ed8; }
+  .stat-value.orange { color:#d97706; }
+  .stat-value.indigo { color:#6366f1; }
+  .stat-sub { font-size:12px; color:#8b8d98; margin-top:2px; }
+
+  .chart-box { border:1px solid #e8e8ec; border-radius:8px; padding:16px; }
+  .chart-title { font-size:13px; font-weight:600; color:#1c2024; margin-bottom:14px; }
+  .bars { display:flex; align-items:flex-end; gap:20px; height:180px; }
+  .bar-col { flex:1; display:flex; flex-direction:column; align-items:center; gap:6px; }
+  .bar { width:100%; border-radius:6px 6px 0 0; transition:height 1s; height:0; }
+  .bar-lbl { font-size:11px; color:#8b8d98; }
+  .bar-val { font-size:11px; font-weight:600; }
+
+  .summary { margin-top:16px; padding:12px 16px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; font-size:12px; color:#16a34a; font-weight:500;
+    opacity:0; transition:all .4s; }
+  .summary.show { opacity:1; }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="logo-wrap">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>
+      </div>
+      <div class="logo-text">IP Winner</div>
+    </div>
+    <div class="nav"><a href="#">總覽</a><a href="#">IP概況</a><a href="#" class="active">管控中心</a><a href="#">期限</a><a href="#">信件</a><a href="#">待辦</a><a href="#">客戶</a><a href="#">人員</a><a href="#">月報</a><a href="#">統計</a><a href="#">設定</a></div>
+  </div>
+  <div class="header-right">IP Winner ▾ <div class="avatar">U</div></div>
+</div>
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-title">🧠 AI 助理 ‹</div>
+    <div class="chat-bubble">目前有 6 條分類規則（4 條 AI 學習、1 條手動、1 條測試中）。最新規則 R-2026-0047 剛由人工確認學習產生。</div>
+    <div class="sidebar-suggestions">
+      <div class="suggest-label">📊 管控中心</div>
+      <div class="suggest-btn">規則準確率排序</div>
+      <div class="suggest-btn">本月處理統計</div>
+      <div class="suggest-label">📧 信件</div>
+      <div class="suggest-btn">今日官方來文</div>
+    </div>
+    <div class="sidebar-input"><span>💬 問題或說「帶我去...」</span></div>
+  </div>
+  <div class="content">
+    <div class="tabs">
+      <div class="tab active" id="tab0" onclick="sw(0)">分類規則</div>
+      <div class="tab" id="tab1" onclick="sw(1)">人員管理</div>
+      <div class="tab" id="tab2" onclick="sw(2)">處理統計</div>
+    </div>
+
+    <!-- Rules -->
+    <div class="tab-content active" id="c0">
+      <div class="mini-stats"><span>已建立 <strong>6</strong> 條規則</span><span>AI 學習 <strong>4</strong></span><span>手動建立 <strong>1</strong></span><span>測試中 <strong>1</strong></span></div>
+      <table class="tbl"><thead><tr><th>規則 ID</th><th>描述</th><th>來源</th><th>狀態</th><th>準確率</th><th>操作</th></tr></thead><tbody>
+        <tr class="data" id="r0"><td style="font-family:Inter,monospace;font-size:11px;color:#6366f1;font-weight:600">R-2026-0001</td><td>TIPO 核准通知自動歸檔</td><td><span class="tag tag-ai">AI 學習</span></td><td><span class="tag tag-green">啟用</span></td><td class="acc acc-hi">99.2%</td><td><span class="link">編輯</span><span class="link muted">停用</span></td></tr>
+        <tr class="data" id="r1"><td style="font-family:Inter,monospace;font-size:11px;color:#6366f1;font-weight:600">R-2026-0012</td><td>USPTO OA 自動辨識收發碼</td><td><span class="tag tag-ai">AI 學習</span></td><td><span class="tag tag-green">啟用</span></td><td class="acc acc-hi">97.8%</td><td><span class="link">編輯</span><span class="link muted">停用</span></td></tr>
+        <tr class="data" id="r2"><td style="font-family:Inter,monospace;font-size:11px;color:#6366f1;font-weight:600">R-2026-0023</td><td>EPO R71(3) 通知 → 核准標籤</td><td><span class="tag tag-manual">手動建立</span></td><td><span class="tag tag-green">啟用</span></td><td class="acc acc-hi">100%</td><td><span class="link">編輯</span><span class="link muted">停用</span></td></tr>
+        <tr class="data" id="r3"><td style="font-family:Inter,monospace;font-size:11px;color:#6366f1;font-weight:600">R-2026-0031</td><td>年費催繳 → 自動提醒負責人</td><td><span class="tag tag-ai">AI 學習</span></td><td><span class="tag tag-green">啟用</span></td><td class="acc acc-hi">95.1%</td><td><span class="link">編輯</span><span class="link muted">停用</span></td></tr>
+        <tr class="data" id="r4"><td style="font-family:Inter,monospace;font-size:11px;color:#6366f1;font-weight:600">R-2026-0038</td><td>韓國 KIPO OA 格式辨識</td><td><span class="tag tag-ai">AI 學習</span></td><td><span class="tag tag-yellow">測試中</span></td><td class="acc acc-mid">82.3%</td><td><span class="link">編輯</span><span class="link muted">停用</span></td></tr>
+        <tr class="data highlight" id="r5"><td style="font-family:Inter,monospace;font-size:11px;color:#6366f1;font-weight:600">R-2026-0047</td><td>Case Update 主旨案號提取 <span class="tag tag-new" style="margin-left:6px">剛建立</span></td><td><span class="tag tag-ai">AI 學習</span></td><td><span class="tag tag-blue">新建</span></td><td class="acc" style="color:#6366f1">85.0%</td><td><span class="link">編輯</span><span class="link muted">停用</span></td></tr>
+      </tbody></table>
+    </div>
+
+    <!-- Staff -->
+    <div class="tab-content" id="c1">
+      <div class="mini-stats"><span>事務所人員 <strong>6</strong> 人</span><span>專利師 <strong>3</strong></span><span>行政 <strong>1</strong></span><span>工程師 <strong>1</strong></span><span>助理 <strong>1</strong></span></div>
+      <table class="tbl"><thead><tr><th>人員</th><th>職位</th><th>負責案件</th><th>準確率</th><th>本週工作量</th><th>操作</th></tr></thead><tbody>
+        <tr class="data" id="st0"><td><span class="av" style="background:#2563eb">陳</span>陳建志</td><td>資深專利師</td><td>42 件</td><td class="acc acc-hi">98.2%</td><td><div class="prog-bar"><div class="prog-fill" id="b0" style="background:#2563eb"></div></div></td><td><span class="link">查看詳情</span></td></tr>
+        <tr class="data" id="st1"><td><span class="av" style="background:#6366f1">黃</span>黃怡君</td><td>專利師</td><td>38 件</td><td class="acc acc-hi">97.1%</td><td><div class="prog-bar"><div class="prog-fill" id="b1" style="background:#6366f1"></div></div></td><td><span class="link">查看詳情</span></td></tr>
+        <tr class="data" id="st2"><td><span class="av" style="background:#16a34a">林</span>林筱婷</td><td>行政主管</td><td>15 件</td><td class="acc acc-hi">100%</td><td><div class="prog-bar"><div class="prog-fill" id="b2" style="background:#16a34a"></div></div></td><td><span class="link">查看詳情</span></td></tr>
+        <tr class="data" id="st3"><td><span class="av" style="background:#f97316">張</span>張明宏</td><td>專利工程師</td><td>28 件</td><td class="acc acc-hi">95.4%</td><td><div class="prog-bar"><div class="prog-fill" id="b3" style="background:#f97316"></div></div></td><td><span class="link">查看詳情</span></td></tr>
+        <tr class="data" id="st4"><td><span class="av" style="background:#818cf8">王</span>王小美</td><td>助理</td><td>22 件</td><td class="acc acc-mid">94.0%</td><td><div class="prog-bar"><div class="prog-fill" id="b4" style="background:#818cf8"></div></div></td><td><span class="link">查看詳情</span></td></tr>
+        <tr class="data" id="st5"><td><span class="av" style="background:#ef4444">李</span>李大偉</td><td>實習生</td><td>8 件</td><td class="acc acc-lo">88.5%</td><td><div class="prog-bar"><div class="prog-fill" id="b5" style="background:#ef4444"></div></div></td><td><span class="link">查看詳情</span></td></tr>
+      </tbody></table>
+    </div>
+
+    <!-- Stats -->
+    <div class="tab-content" id="c2">
+      <div class="stat-cards">
+        <div class="stat-card"><div class="stat-label">收件總數</div><div class="stat-value blue" id="sv0">0</div><div class="stat-sub">封（本月）</div></div>
+        <div class="stat-card"><div class="stat-label">AI 自動處理</div><div class="stat-value green" id="sv1">0</div><div class="stat-sub">封 (90%)</div></div>
+        <div class="stat-card"><div class="stat-label">人工確認</div><div class="stat-value orange" id="sv2">0</div><div class="stat-sub">封 (10%)</div></div>
+        <div class="stat-card"><div class="stat-label">新增規則</div><div class="stat-value indigo" id="sv3">0</div><div class="stat-sub">條（AI 學習）</div></div>
+      </div>
+      <div class="chart-box">
+        <div class="chart-title">AI 自動處理率趨勢</div>
+        <div class="bars">
+          <div class="bar-col"><div class="bar-val" style="color:#d97706">72%</div><div class="bar" id="cb0" style="background:#f97316"></div><div class="bar-lbl">10月</div></div>
+          <div class="bar-col"><div class="bar-val" style="color:#d97706">78%</div><div class="bar" id="cb1" style="background:#f97316"></div><div class="bar-lbl">11月</div></div>
+          <div class="bar-col"><div class="bar-val" style="color:#1d4ed8">83%</div><div class="bar" id="cb2" style="background:#3b82f6"></div><div class="bar-lbl">12月</div></div>
+          <div class="bar-col"><div class="bar-val" style="color:#1d4ed8">87%</div><div class="bar" id="cb3" style="background:#3b82f6"></div><div class="bar-lbl">1月</div></div>
+          <div class="bar-col"><div class="bar-val" style="color:#16a34a">89%</div><div class="bar" id="cb4" style="background:#22c55e"></div><div class="bar-lbl">2月</div></div>
+          <div class="bar-col"><div class="bar-val" style="color:#16a34a">90%</div><div class="bar" id="cb5" style="background:#22c55e"></div><div class="bar-lbl">3月</div></div>
+        </div>
+      </div>
+      <div class="summary" id="sum">✅ 本月 AI 處理率 90%，較上月提升 1%。人工確認減少 34%，預計下月可達 93%。</div>
+    </div>
+  </div>
+</div>
+<script>
+const bars=[84,76,30,56,44,16], chartH=[72,78,83,87,89,90], targets=[347,312,35,12];
+function sw(i){document.querySelectorAll('.tab').forEach((t,x)=>t.classList.toggle('active',x===i));document.querySelectorAll('.tab-content').forEach((c,x)=>c.classList.toggle('active',x===i))}
+function showRows(pre,n,d){for(let i=0;i<n;i++)setTimeout(()=>document.getElementById(pre+i).classList.add('show'),d+i*120)}
+function countUp(id,t,dur){const el=document.getElementById(id);let c=0;const s=Math.ceil(t/(dur/30));const iv=setInterval(()=>{c=Math.min(c+s,t);el.textContent=c;if(c>=t)clearInterval(iv)},30)}
+
+const T=[
+  [300,()=>showRows('r',6,0)],
+  [4000,()=>{sw(1);setTimeout(()=>{showRows('st',6,0);bars.forEach((p,i)=>setTimeout(()=>document.getElementById('b'+i).style.width=p+'%',200+i*100))},100)}],
+  [8000,()=>{sw(2);setTimeout(()=>{targets.forEach((t,i)=>countUp('sv'+i,t,800));chartH.forEach((h,i)=>setTimeout(()=>document.getElementById('cb'+i).style.height=(h/100*160)+'px',200+i*200))},200);setTimeout(()=>document.getElementById('sum').classList.add('show'),2500)}],
+];
+T.forEach(([d,fn])=>setTimeout(fn,d));
+</script>
+</body>
+</html>

@@ -1,0 +1,300 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>IP Winner — AI 自動收信歸檔</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;450;500;600;700&family=Noto+Sans+TC:wght@400;500;600;700&display=swap');
+  * { margin:0; padding:0; box-sizing:border-box; }
+  body { font-family:'Inter','Noto Sans TC',sans-serif; background:#ffffff; color:#1c2024; width:1280px; height:720px; overflow:hidden; }
+
+  /* ── Header / Navbar ── */
+  .header { display:flex; align-items:center; justify-content:space-between; padding:0 16px; height:48px; background:#fff; border-bottom:1px solid #e8e8ec; }
+  .header-left { display:flex; align-items:center; gap:16px; }
+  .logo-wrap { display:flex; align-items:center; gap:8px; }
+  .logo-icon { width:26px; height:26px; background:#1c2024; border-radius:6px; display:flex; align-items:center; justify-content:center; }
+  .logo-icon svg { width:14px; height:14px; fill:none; stroke:#fff; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; }
+  .logo-text { font-size:14px; font-weight:600; color:#1c2024; }
+  .nav { display:flex; gap:2px; }
+  .nav a { font-size:13px; font-weight:450; color:#60646c; padding:6px 12px; text-decoration:none; border-radius:6px; transition:all .15s; }
+  .nav a:hover { background:#f0f0f3; color:#1c2024; }
+  .nav a.active { background:#f0f0f3; color:#1c2024; font-weight:500; }
+  .header-right { display:flex; align-items:center; gap:10px; font-size:13px; font-weight:450; color:#60646c; }
+  .avatar { width:28px; height:28px; border-radius:50%; background:#6366f1; color:#fff; display:flex; align-items:center; justify-content:center; font-size:11px; font-weight:600; }
+
+  /* ── Layout ── */
+  .main { display:flex; height:calc(100% - 48px); }
+
+  /* ── AI Sidebar ── */
+  .sidebar { width:220px; background:#1a1a1e; color:#ccc; padding:14px; flex-shrink:0; display:flex; flex-direction:column; }
+  .sidebar-title { font-size:13px; color:#888; margin-bottom:12px; display:flex; align-items:center; gap:6px; }
+  .chat-bubble { background:#27272a; border-radius:10px; padding:10px 12px; font-size:12px; line-height:1.6; margin-bottom:8px; color:#d4d4d8; }
+  .chat-bubble.ai { border-left:3px solid #6366f1; }
+  .sidebar-suggestions { margin-top:auto; }
+  .suggest-label { font-size:11px; color:#666; margin-bottom:6px; margin-top:10px; }
+  .suggest-btn { display:inline-block; font-size:11px; color:#a1a1aa; background:#27272a; border-radius:6px; padding:4px 10px; margin:2px 4px 2px 0; cursor:pointer; }
+  .sidebar-input { display:flex; align-items:center; gap:8px; margin-top:12px; padding:8px 12px; background:#27272a; border-radius:8px; }
+  .sidebar-input span { font-size:12px; color:#52525b; }
+
+  .content { flex:1; padding:24px 28px; overflow:hidden; max-width:900px; }
+
+  /* ── Stat bar ── */
+  .stat-bar { display:flex; margin-bottom:20px; border:1px solid #e8e8ec; border-radius:10px; overflow:hidden; }
+  .stat-item { flex:1; padding:16px 24px; background:#fff; border-right:1px solid #e8e8ec; }
+  .stat-item:last-child { border-right:none; }
+  .stat-item.warn { background:#fffbeb; }
+  .stat-label { font-size:12px; color:#8b8d98; font-weight:500; margin-bottom:2px; }
+  .stat-value { font-size:16px; font-weight:700; }
+  .stat-value.blue { color:#1d4ed8; }
+  .stat-value.orange { color:#d97706; }
+  .stat-value.red { color:#dc2626; }
+  .stat-value.green { color:#16a34a; }
+  .stat-sub { font-size:12px; color:#8b8d98; margin-top:2px; }
+
+  /* ── Two columns ── */
+  .columns { display:grid; grid-template-columns:1fr 360px; gap:20px; }
+
+  /* ── Domain labels ── */
+  .domain-label { display:flex; align-items:center; gap:8px; margin-bottom:10px; }
+  .domain-bar { width:3px; height:14px; border-radius:2px; }
+  .domain-bar.orange { background:#f97316; }
+  .domain-bar.blue { background:#2563eb; }
+  .domain-text { font-size:10px; font-weight:700; letter-spacing:0.07em; text-transform:uppercase; color:#8b8d98; }
+
+  /* ── Section cards ── */
+  .section { border:1px solid #e8e8ec; border-radius:8px; margin-bottom:16px; overflow:hidden; }
+  .section-head { display:flex; align-items:center; justify-content:space-between; padding:9px 14px; border-bottom:1px solid #e8e8ec; }
+  .section-head.blue-bg { background:#eff6ff; }
+  .section-head.orange-bg { background:#fff7ed; }
+  .section-head-left { display:flex; align-items:center; gap:8px; font-size:13px; font-weight:600; color:#1c2024; }
+  .section-head-left .icon { font-size:14px; }
+  .section-badge { font-size:10px; font-weight:600; padding:2px 7px; border-radius:10px; color:#fff; }
+  .section-badge.blue { background:#3b82f6; }
+  .section-badge.orange { background:#f97316; }
+  .section-link { font-size:12px; color:#60646c; cursor:pointer; }
+
+  /* ── Email rows ── */
+  .email-row { display:grid; grid-template-columns:120px 1fr auto auto; align-items:center; padding:9px 14px; border-bottom:1px solid #f0f0f3; gap:12px;
+    opacity:0; transform:translateY(8px); transition:all .4s ease; }
+  .email-row:last-child { border-bottom:none; }
+  .email-row.show { opacity:1; transform:translateY(0); }
+  .email-row.active { background:#fffbeb; }
+  .email-row.done { background:#f0fdf4; }
+  .email-code { font-size:10px; font-family:'Inter',monospace; font-weight:600; color:#60646c; }
+  .email-info { }
+  .email-title { font-size:13px; font-weight:500; color:#1c2024; }
+  .email-desc { font-size:11px; color:#8b8d98; margin-top:1px; }
+
+  .tag { display:inline-block; font-size:10px; font-weight:600; padding:2px 8px; border-radius:4px; }
+  .tag-new { background:#fff7ed; color:#f97316; border:1px solid #fed7aa; }
+  .tag-scanning { background:#eff6ff; color:#3b82f6; border:1px solid #bfdbfe; animation:pulse 1s infinite; }
+  .tag-done { background:#f0fdf4; color:#16a34a; border:1px solid #bbf7d0; }
+  @keyframes pulse { 0%,100%{opacity:1}50%{opacity:.5} }
+
+  .check { opacity:0; color:#16a34a; font-size:15px; transition:opacity .3s; }
+  .check.show { opacity:1; }
+
+  /* ── Right panel: AI processing ── */
+  .ai-section { border:1px solid #e8e8ec; border-radius:8px; overflow:hidden; }
+  .ai-section-head { padding:9px 14px; border-bottom:1px solid #e8e8ec; background:#eff6ff; display:flex; align-items:center; gap:8px; }
+  .ai-section-head .icon { font-size:14px; }
+  .ai-section-title { font-size:13px; font-weight:600; color:#1c2024; }
+  .ai-body { padding:14px; }
+
+  .proc-item { margin-bottom:16px; opacity:0; transform:translateX(12px); transition:all .5s ease; }
+  .proc-item.show { opacity:1; transform:translateX(0); }
+  .proc-header { font-size:12px; font-weight:600; color:#1c2024; margin-bottom:8px; }
+  .proc-steps { display:flex; gap:3px; margin-bottom:4px; }
+  .proc-step { flex:1; height:4px; border-radius:2px; background:#e8e8ec; transition:background .4s; }
+  .proc-step.done { background:#16a34a; }
+  .proc-step.active { background:#3b82f6; animation:pulse 1s infinite; }
+  .proc-labels { display:flex; gap:3px; }
+  .proc-label { flex:1; font-size:10px; color:#cdced6; transition:color .3s; }
+  .proc-label.done { color:#16a34a; }
+  .proc-label.active { color:#3b82f6; }
+  .proc-file { font-size:11px; margin-top:6px; opacity:0; transition:all .3s; }
+  .proc-file.show { opacity:1; }
+  .proc-file .fname { color:#60646c; }
+  .proc-file .fpath { color:#16a34a; }
+
+  /* ── Progress ── */
+  .progress-wrap { margin-top:16px; padding-top:12px; border-top:1px solid #f0f0f3; }
+  .progress-top { display:flex; justify-content:space-between; font-size:12px; color:#8b8d98; margin-bottom:6px; }
+  .progress-bar { height:6px; border-radius:3px; background:#e8e8ec; overflow:hidden; }
+  .progress-fill { height:100%; border-radius:3px; background:linear-gradient(90deg,#3b82f6,#16a34a); width:0%; transition:width .5s; }
+
+  .success-bar { margin-top:14px; padding:10px 14px; background:#f0fdf4; border:1px solid #bbf7d0; border-radius:8px; font-size:12px; color:#16a34a; font-weight:500;
+    opacity:0; transform:translateY(8px); transition:all .4s; display:flex; align-items:center; gap:6px; }
+  .success-bar.show { opacity:1; transform:translateY(0); }
+</style>
+</head>
+<body>
+<div class="header">
+  <div class="header-left">
+    <div class="logo-wrap">
+      <div class="logo-icon">
+        <svg viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="2,4 12,13 22,4"/></svg>
+      </div>
+      <div class="logo-text">IP Winner</div>
+    </div>
+    <div class="nav">
+      <a href="#" class="active">總覽</a><a href="#">IP概況</a><a href="#">案件</a><a href="#">期限</a><a href="#">信件</a><a href="#">待辦</a><a href="#">客戶</a><a href="#">人員</a><a href="#">月報</a><a href="#">統計</a><a href="#">設定</a>
+    </div>
+  </div>
+  <div class="header-right">
+    IP Winner ▾
+    <div class="avatar">U</div>
+  </div>
+</div>
+
+<div class="main">
+  <div class="sidebar">
+    <div class="sidebar-title">🧠 AI 助理 ‹</div>
+    <div class="chat-bubble ai">你好！我是 IP Winner AI 助理。<br>可以查詢案件進度、截止期限、人員 loading，也可以說「帶我去...」直接跳轉頁面。</div>
+    <div class="chat-bubble ai">試試下方的範例問題！</div>
+    <div class="sidebar-suggestions">
+      <div class="suggest-label">📊 IP概況</div>
+      <div class="suggest-btn">目前有幾件OA待答辯</div>
+      <div class="suggest-btn">7天內截止案件</div>
+      <div class="suggest-label">📧 信件</div>
+      <div class="suggest-btn">今日官方來文</div>
+      <div class="suggest-btn">TSMC23014PUS 進度</div>
+    </div>
+    <div class="sidebar-input"><span>💬 問題或說「帶我去...」</span></div>
+  </div>
+
+  <div class="content">
+    <div class="stat-bar">
+      <div class="stat-item"><div class="stat-label">今日收件</div><div class="stat-value blue">3</div><div class="stat-sub">封官方來文</div></div>
+      <div class="stat-item"><div class="stat-label">AI 已分類</div><div class="stat-value green" id="classified">0</div><div class="stat-sub">自動處理</div></div>
+      <div class="stat-item warn"><div class="stat-label">待確認</div><div class="stat-value orange" id="pending">3</div><div class="stat-sub">需人工</div></div>
+      <div class="stat-item"><div class="stat-label">今日信件</div><div class="stat-value" style="color:#1c2024">0</div><div class="stat-sub">2 封待確認</div></div>
+    </div>
+
+    <div class="columns">
+      <div class="col-left">
+        <div class="domain-label"><div class="domain-bar orange"></div><div class="domain-text">信件收發</div></div>
+        <div class="section">
+          <div class="section-head orange-bg">
+            <div class="section-head-left"><span class="icon">📬</span> 今日新收官方來文 <span class="section-badge orange">3</span></div>
+            <div class="section-link">全部 3 個 ›</div>
+          </div>
+          <div class="email-row" id="e0">
+            <div class="email-code">MTKE23005PTW</div>
+            <div class="email-info">
+              <div class="email-title">發明專利核准審定書（含 Extensions）</div>
+              <div class="email-desc">智慧財產局 · 聯發科技</div>
+            </div>
+            <span class="tag tag-new" id="tag0">新收</span>
+            <span class="check" id="ck0">✓</span>
+          </div>
+          <div class="email-row" id="e1">
+            <div class="email-code">TSMC23014PUS</div>
+            <div class="email-info">
+              <div class="email-title">Non-Final OA 答辯截止</div>
+              <div class="email-desc">USPTO · 台積電</div>
+            </div>
+            <span class="tag tag-new" id="tag1">新收</span>
+            <span class="check" id="ck1">✓</span>
+          </div>
+          <div class="email-row" id="e2">
+            <div class="email-code">EPPA23801EP1</div>
+            <div class="email-info">
+              <div class="email-title">Rule 71(3) Communication</div>
+              <div class="email-desc">EPO · European Client C</div>
+            </div>
+            <span class="tag tag-new" id="tag2">新收</span>
+            <span class="check" id="ck2">✓</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="col-right">
+        <div class="domain-label"><div class="domain-bar blue"></div><div class="domain-text">AI 處理進度</div></div>
+        <div class="ai-section">
+          <div class="ai-section-head">
+            <span class="icon">🤖</span>
+            <div class="ai-section-title">AI 處理進度</div>
+          </div>
+          <div class="ai-body">
+            <div class="proc-item" id="p0">
+              <div class="proc-header">MTKE23005PTW · 智慧財產局</div>
+              <div class="proc-steps"><div class="proc-step" id="s0_0"></div><div class="proc-step" id="s0_1"></div><div class="proc-step" id="s0_2"></div><div class="proc-step" id="s0_3"></div></div>
+              <div class="proc-labels"><div class="proc-label" id="l0_0">辨識收發碼</div><div class="proc-label" id="l0_1">下載附件</div><div class="proc-label" id="l0_2">重新命名</div><div class="proc-label" id="l0_3">歸檔</div></div>
+              <div class="proc-file" id="f0"><div class="fname">📎 MTKE23005PTW_核准審定書_2026-03-19.pdf</div><div class="fpath">→ 📁 聯發科技/MTKE23005/官方來文/</div></div>
+            </div>
+            <div class="proc-item" id="p1">
+              <div class="proc-header">TSMC23014PUS · USPTO</div>
+              <div class="proc-steps"><div class="proc-step" id="s1_0"></div><div class="proc-step" id="s1_1"></div><div class="proc-step" id="s1_2"></div><div class="proc-step" id="s1_3"></div></div>
+              <div class="proc-labels"><div class="proc-label" id="l1_0">辨識收發碼</div><div class="proc-label" id="l1_1">下載附件</div><div class="proc-label" id="l1_2">重新命名</div><div class="proc-label" id="l1_3">歸檔</div></div>
+              <div class="proc-file" id="f1"><div class="fname">📎 TSMC23014PUS_OA_NonFinal_2026-03-19.pdf</div><div class="fpath">→ 📁 台積電/TSMC23014/Office Actions/</div></div>
+            </div>
+            <div class="proc-item" id="p2">
+              <div class="proc-header">EPPA23801EP1 · EPO</div>
+              <div class="proc-steps"><div class="proc-step" id="s2_0"></div><div class="proc-step" id="s2_1"></div><div class="proc-step" id="s2_2"></div><div class="proc-step" id="s2_3"></div></div>
+              <div class="proc-labels"><div class="proc-label" id="l2_0">辨識收發碼</div><div class="proc-label" id="l2_1">下載附件</div><div class="proc-label" id="l2_2">重新命名</div><div class="proc-label" id="l2_3">歸檔</div></div>
+              <div class="proc-file" id="f2"><div class="fname">📎 EPPA23801EP1_R71_2026-03-19.pdf</div><div class="fpath">→ 📁 European Client C/EPPA23801/</div></div>
+            </div>
+
+            <div class="progress-wrap">
+              <div class="progress-top"><span>總進度</span><span id="pct">0%</span></div>
+              <div class="progress-bar"><div class="progress-fill" id="fill"></div></div>
+            </div>
+            <div class="success-bar" id="success">✅ 3 封信件全部自動歸檔完成 — 耗時 12 秒</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+let cls=0;
+const T=[
+  [400,()=>sh('e0')],[700,()=>sh('e1')],[1000,()=>sh('e2')],
+  [1600,()=>startProc(0)],
+  [2000,()=>stepDone(0,0)],[2500,()=>stepDone(0,1)],[3000,()=>stepDone(0,2)],[3500,()=>{stepDone(0,3);emailDone(0)}],
+  [4100,()=>startProc(1)],
+  [4500,()=>stepDone(1,0)],[5000,()=>stepDone(1,1)],[5500,()=>stepDone(1,2)],[6000,()=>{stepDone(1,3);emailDone(1)}],
+  [6600,()=>startProc(2)],
+  [7000,()=>stepDone(2,0)],[7500,()=>stepDone(2,1)],[8000,()=>stepDone(2,2)],[8500,()=>{stepDone(2,3);emailDone(2)}],
+  [9200,()=>{document.getElementById('success').classList.add('show');document.getElementById('pct').textContent='100%';document.getElementById('fill').style.width='100%';}],
+];
+function sh(id){document.getElementById(id).classList.add('show')}
+function startProc(i){
+  document.getElementById('p'+i).classList.add('show');
+  document.getElementById('e'+i).classList.add('active');
+  document.getElementById('tag'+i).className='tag tag-scanning';
+  document.getElementById('tag'+i).textContent='AI 辨識中...';
+  document.getElementById('s'+i+'_0').classList.add('active');
+  document.getElementById('l'+i+'_0').classList.add('active');
+  upProg();
+}
+function stepDone(e,s){
+  document.getElementById('s'+e+'_'+s).className='proc-step done';
+  document.getElementById('l'+e+'_'+s).className='proc-label done';
+  if(s<3){document.getElementById('s'+e+'_'+(s+1)).classList.add('active');document.getElementById('l'+e+'_'+(s+1)).classList.add('active');}
+  if(s===1){document.getElementById('tag'+e).className='tag tag-done';document.getElementById('tag'+e).textContent='已辨識';}
+  if(s===3){document.getElementById('f'+e).classList.add('show');}
+  upProg();
+}
+function emailDone(i){
+  document.getElementById('e'+i).classList.remove('active');
+  document.getElementById('e'+i).classList.add('done');
+  document.getElementById('tag'+i).className='tag tag-done';
+  document.getElementById('tag'+i).textContent='已歸檔 ✓';
+  document.getElementById('ck'+i).classList.add('show');
+  cls++;
+  document.getElementById('classified').textContent=cls;
+  document.getElementById('pending').textContent=3-cls;
+}
+function upProg(){
+  const d=document.querySelectorAll('.proc-step.done').length;
+  const p=Math.round(d/12*100);
+  document.getElementById('pct').textContent=p+'%';
+  document.getElementById('fill').style.width=p+'%';
+}
+T.forEach(([d,fn])=>setTimeout(fn,d));
+</script>
+</body>
+</html>
