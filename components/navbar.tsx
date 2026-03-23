@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Button, Avatar } from "@radix-ui/themes";
+import { Avatar, IconButton } from "@radix-ui/themes";
 import {
   Mail,
   Settings,
@@ -49,67 +49,107 @@ export default function Navbar() {
       background: "var(--color-background)",
       display: "flex",
       alignItems: "center",
-      padding: "0 16px",
-      gap: 8,
+      padding: "0 12px",
+      gap: 6,
       position: "sticky",
       top: 0,
       zIndex: 50,
     }}>
       {/* Logo */}
-      <Link href="/app" style={{ display: "flex", alignItems: "center", gap: 8, marginRight: 16, textDecoration: "none" }}>
+      <Link href="/app" style={{ display: "flex", alignItems: "center", gap: 7, marginRight: 10, textDecoration: "none", flexShrink: 0 }}>
         <div style={{
-          width: 26, height: 26, borderRadius: 6,
+          width: 24, height: 24, borderRadius: 5,
           background: "var(--green-9)", display: "flex",
           alignItems: "center", justifyContent: "center",
         }}>
-          <Mail size={14} color="white" />
+          <Mail size={13} color="white" />
         </div>
-        <span style={{ fontSize: 14, fontWeight: 600, color: "var(--gray-12)", letterSpacing: "-0.02em" }}>
+        <span style={{ fontSize: 13, fontWeight: 600, color: "var(--gray-12)", letterSpacing: "-0.02em" }}>
           IP Winner
         </span>
       </Link>
 
-      {/* Nav items */}
-      <nav style={{ display: "flex", alignItems: "center", gap: 2, flex: 1, overflowX: "auto", scrollbarWidth: "none" }}>
+      {/* Nav items — horizontal scroll, compact */}
+      <nav style={{
+        display: "flex",
+        alignItems: "center",
+        gap: 1,
+        flex: 1,
+        overflowX: "auto",
+        scrollbarWidth: "none",
+        WebkitOverflowScrolling: "touch",
+        maskImage: "linear-gradient(to right, transparent 0, black 0, black calc(100% - 20px), transparent 100%)",
+        WebkitMaskImage: "linear-gradient(to right, transparent 0, black 0, black calc(100% - 20px), transparent 100%)",
+      }}>
         {NAV_ITEMS.map(({ href, label, icon: Icon }) => {
           const isActive = href === "/app"
             ? pathname === "/app"
             : pathname.startsWith(href);
           return (
-            <Link key={href} href={href} style={{ textDecoration: "none" }}>
-              <Button
-                variant="ghost"
-                size="1"
-                color={isActive ? "green" : "gray"}
-                highContrast={isActive}
-                style={{ gap: 5, fontWeight: isActive ? 500 : 400 }}
-              >
-                <Icon size={13} />
-                {label}
-              </Button>
+            <Link
+              key={href}
+              href={href}
+              style={{
+                display: "inline-flex",
+                alignItems: "center",
+                gap: 4,
+                padding: "4px 8px",
+                borderRadius: 4,
+                fontSize: 13,
+                fontWeight: isActive ? 500 : 400,
+                color: isActive ? "var(--green-11)" : "var(--gray-11)",
+                background: isActive ? "var(--green-3)" : "transparent",
+                textDecoration: "none",
+                whiteSpace: "nowrap",
+                flexShrink: 0,
+                transition: "background 0.12s, color 0.12s",
+              }}
+              onMouseEnter={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = "var(--gray-3)";
+                  e.currentTarget.style.color = "var(--gray-12)";
+                }
+              }}
+              onMouseLeave={(e) => {
+                if (!isActive) {
+                  e.currentTarget.style.background = "transparent";
+                  e.currentTarget.style.color = "var(--gray-11)";
+                }
+              }}
+            >
+              <Icon size={13} />
+              {label}
             </Link>
           );
         })}
       </nav>
 
       {/* Settings */}
-      <Link href="/app/settings" style={{ textDecoration: "none" }}>
-        <Button
+      <Link href="/app/settings" style={{ textDecoration: "none", flexShrink: 0 }}>
+        <IconButton
           variant="ghost"
           size="1"
           color={pathname.startsWith("/app/settings") ? "green" : "gray"}
           highContrast={pathname.startsWith("/app/settings")}
         >
           <Settings size={15} />
-        </Button>
+        </IconButton>
       </Link>
 
       {/* Tenant + user */}
-      <div style={{ display: "flex", alignItems: "center", gap: 8, flexShrink: 0 }}>
-        <Button variant="outline" size="1" color="gray" className="col-hide-m" style={{ gap: 6 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0 }}>
+        <button
+          className="col-hide-m"
+          style={{
+            display: "flex", alignItems: "center", gap: 5,
+            padding: "4px 10px", borderRadius: 5,
+            border: "1px solid var(--gray-6)", background: "var(--gray-2)",
+            fontSize: 12, color: "var(--gray-11)", cursor: "pointer",
+          }}
+        >
           <span style={{ fontWeight: 500, color: "var(--gray-12)" }}>IP Winner</span>
-          <ChevronDown size={11} />
-        </Button>
+          <ChevronDown size={10} />
+        </button>
         <Avatar size="2" fallback="U" color="gray" radius="full" />
       </div>
     </header>
